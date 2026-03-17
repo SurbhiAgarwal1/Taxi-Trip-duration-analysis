@@ -566,37 +566,37 @@ Node.js 18+
 
 PostgreSQL
 
-1. Clone Repository
+#1. Clone Repository
 
 git clone <your-repo-url>  
 cd <repo-name>  
 
-2. Setup PostgreSQL
+#2. Setup PostgreSQL
 
 CREATE DATABASE taxi_ai;  
 
 Set environment variable:
 
-Linux / Mac
+#Linux / Mac
 
 export DATABASE_URL="postgresql+psycopg2://USER:PASSWORD@localhost:5432/taxi_ai"  
 
-Windows
+#Windows
 
 set DATABASE_URL=postgresql+psycopg2://USER:PASSWORD@localhost:5432/taxi_ai  
 
-3. Backend Setup
+#3. Backend Setup
 
 cd backend  
 python -m venv .venv  
 
 Activate environment:
 
-Mac / Linux
+#Mac / Linux
 
 source .venv/bin/activate  
 
-Windows
+#Windows
 
 .venv\Scripts\activate  
 
@@ -608,7 +608,7 @@ Run backend server:
 
 uvicorn app.main:app --reload  
 
-Backend:
+#Backend:
 
 http://127.0.0.1:8000  
 
@@ -630,54 +630,54 @@ http://localhost:5173
 
 What makes this project stronger than a typical ML project?
 
-not limited to one prediction output
+-not limited to one prediction output
 
-adds uncertainty and confidence
+-adds uncertainty and confidence
 
-combines ETA + pricing + corridor analytics
+-combines ETA + pricing + corridor analytics
 
-includes explainability and simulation
+-includes explainability and simulation
 
-has dashboard-based exploration
+-has dashboard-based exploration
 
-includes monitoring and drift awareness
+-includes monitoring and drift awareness
 
-built as a complete full-stack system
+-built as a complete full-stack system
 
-What makes it relevant in the market?
+-What makes it relevant in the market?
 
-improves trust in ETA and price estimates
+-improves trust in ETA and price estimates
 
-makes pricing less opaque
+-makes pricing less opaque
 
-supports smarter rider/operator decisions
+-supports smarter rider/operator decisions
 
-exposes route-level intelligence
+-exposes route-level intelligence
 
-bridges analytics, prediction, and product design
+-bridges analytics, prediction, and product design
 
 ## 🚀 Future Scope
 
-real-time traffic integration
+-real-time traffic integration
 
-quantile regression for improved interval estimation
+-quantile regression for improved interval estimation
 
-automated retraining pipeline
+-automated retraining pipeline
 
-model versioning
+-model versioning
 
-multi-city deployment
+-multi-city deployment
 
-user authentication and saved routes
+-user authentication and saved routes
 
-route recommendation layer
+-route recommendation layer
 
-live monitoring alerts
+-live monitoring alerts
 
 ## 👩‍💻 Authors
 
+Surbhi Agarwal
 Triveni Reddy  
-Surbhi Agarwal  
 
 ## ⭐ Final Positioning
 
@@ -685,18 +685,18 @@ This project is not just a taxi trip duration predictor.
 
 It is a Intelligence and Decision Support System that combines:
 
-ETA prediction
+-ETA prediction
 
-uncertainty estimation
+-uncertainty estimation
 
-pricing transparency
+-pricing transparency
 
-corridor reliability analytics
+-corridor reliability analytics
 
-simulation
+-simulation
 
-monitoring
+-monitoring
 
-dashboard-driven exploration
+-dashboard-driven exploration
 
 to fill a real gap between basic predictive modeling and practical, transparent mobility decision systems.
