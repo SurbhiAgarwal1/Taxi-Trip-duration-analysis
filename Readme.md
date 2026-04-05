@@ -1,695 +1,444 @@
 # 🚕 Taxi Trip Duration Analysis with Path-Based Pricing Intelligence
 
-A full-stack Mobility Intelligence and Decision Support System that predicts ETA (Estimated Time of Arrival) with uncertainty, estimates transparent price bands, explains pricing behavior, detects delay-prone corridors, and provides interactive spatial dashboards for monitoring mobility patterns.
+> **A full-stack Mobility Intelligence and Decision Support System** — combining uncertainty-aware ETA prediction, transparent pricing, corridor analytics, spatial dashboards, and operational monitoring into one integrated platform.
 
-Unlike traditional taxi prediction projects that only return a single trip duration value, this system is designed as a decision-support platform that combines machine learning, pricing intelligence, corridor analytics, monitoring, and dashboard-based exploration.
+---
 
 ## 📌 Project Overview
 
-This project analyzes historical taxi trip data and builds a production-style analytics system that can:
+Most ride-hailing systems return a single ETA and a single price. This system goes further. It is designed as a **decision-support platform** that provides:
 
--predict trip duration (ETA)
+- ⏱️ Predicted ETA with uncertainty interval (P50–P90)
+- 🎯 Confidence score and delay risk classification
+- 💰 Transparent price bands (min–max) with explanations
+- 🛣️ Pickup-to-dropoff corridor reliability analytics
+- 🔬 What-if simulation across time scenarios
+- 🗺️ Interactive spatial dashboards
+- 📊 Model monitoring and drift awareness
 
--estimate prediction intervals (P50–P90)
-
--calculate confidence score
-
--classify delay risk
-
--estimate fair price bands (min–max)
-
--explain why a trip is expensive
-
-simulate pricing and ETA under different time scenarios
-
-analyze pickup-to-dropoff corridor reliability
-
-visualize spatial trends using interactive dashboards
-
-monitor model quality and drift over time
-
-This is not just a machine learning notebook. It is a complete end-to-end mobility intelligence system with:
-
-React frontend
-
-FastAPI backend
-
-PostgreSQL storage
-
-ML prediction and pricing layer
-
-spatial analytics dashboards
-
-monitoring and drift-awareness components
+---
 
 ## 🎯 Market Gap: What Problem Does This Solve?
 
-Most ride-hailing and taxi systems today expose only a single ETA value and a single price estimate. That creates multiple gaps in transparency and decision-making:
+| Gap in Existing Systems | What This Project Adds |
+|---|---|
+| Single ETA with no uncertainty | Prediction interval (P50–P90) + confidence score |
+| No delay risk signal | Risk classification: Low / Medium / High |
+| No corridor-level insight | Per-route reliability score and volatility index |
+| One opaque price estimate | Price band (min–max) with driver breakdown |
+| No explanation layer | "Why is this trip expensive?" feature |
+| No scenario testing | What-if simulation across time windows |
+| No operational monitoring | Drift awareness + slice-level error tracking |
 
-### What is missing in most current systems?
-
-No uncertainty around ETA  
-Users see one number, but not how reliable it is.
-
-No confidence or delay risk indicator  
-A 12-minute ETA and another 12-minute ETA may not have the same reliability.
-
-No corridor-level intelligence  
-Platforms do not usually show which pickup-to-dropoff routes are consistently unreliable.
-
-No transparent price band  
-Users get one price, without understanding expected variation.
-
-No explanation layer  
-Users often do not know whether a trip is expensive because of congestion, corridor volatility, peak hour, or route-specific patterns.
-
-No scenario testing  
-Users cannot compare what happens if they travel 30 minutes later, during non-peak time, or across a different corridor.
-
-No operational monitoring view  
-Most student-level projects stop after training a model; they do not track interval coverage, slice-level error, or drift.
-
-### What gap does this project fill?
-
-This project fills the gap between a basic prediction model and a decision-support product by adding:
-
-uncertainty-aware ETA instead of a single point prediction
-
-confidence and delay-risk interpretation
-
-route/corridor reliability analytics
-
-explainable price bands instead of opaque estimates
-
-what-if simulation for better travel decisions
-
-dashboard-driven monitoring for operational insight
-
-In short, this project brings together the kinds of features that are typically scattered across pricing engines, dispatch analytics tools, forecasting systems, and operations dashboards into one integrated platform.
-
-## 💡 Why This Project Matters
-
-Urban mobility systems are highly variable because travel time and trip cost depend on:
-
-hour of day
-
-traffic congestion
-
-route/corridor characteristics
-
-pickup and dropoff zone behavior
-
-demand concentration
-
-trip distance and duration volatility
-
-A single-value prediction is often not enough for real-world decision-making.
-
-This project improves trust and usefulness by providing:
-
-ETA with uncertainty
-
-price with range
-
-risk with interpretation
-
-corridor analytics with reliability
-
-monitoring with drift awareness
-
-That makes the system more useful for:
-
-riders making timing decisions
-
-operators understanding route volatility
-
-analysts studying zone and corridor patterns
-
-product teams building transparent mobility experiences
+---
 
 ## 🧠 Core Features
 
-### 1. ETA Prediction Engine
+### 1. 🔮 ETA Prediction Engine
 
-The system predicts trip duration using multiple machine learning approaches:
+Trains and compares multiple ML models:
 
-Linear Regression (baseline)
+- **Linear Regression** — baseline
+- **Random Forest** — ensemble
+- **Gradient Boosting** — high accuracy
 
-Random Forest
+**Per-trip output:**
+- Predicted ETA
+- Prediction interval (P50–P90 range)
+- Confidence score
+- Delay risk classification
 
-Gradient Boosting
+---
 
-Output
+### 2. 📊 Uncertainty-Aware Prediction
 
-For each trip request, the system returns:
+ETA is treated as a distribution, not a fixed value.
 
-predicted ETA
+- Interval-style output instead of only a point estimate
+- Confidence scoring based on model certainty and historical reliability
+- Risk categorization: `Low Delay Risk` / `Medium Delay Risk` / `High Delay Risk`
 
-prediction interval (P50–P90 style range)
+> Two trips can share the same ETA but differ widely in reliability. This feature makes that visible.
 
-confidence score
+---
 
-delay risk classification
+### 3. 🔍 Slice-Level Evaluation
 
-Why this matters
+Model quality is measured at granular levels, not just overall.
 
-Traditional systems usually show one ETA number. This project adds uncertainty and risk awareness so the user can understand not just what the ETA is, but also how reliable it is.
+**Slice dimensions:**
+- Zone × Hour
+- Corridor × Hour
+- Time-of-day buckets
+- High-demand vs low-demand segments
 
-### 2. Uncertainty-Aware Prediction
+**Metrics:** MAE, RMSE, R²
 
-A major advanced part of this project is that ETA is not treated as a fixed value.
+> A model that looks good overall may perform poorly on specific zones or hours. Slice evaluation catches that.
 
-Included capabilities
+---
 
-interval-style output instead of only point estimate
+### 4. 🛣️ Corridor Intelligence
 
-confidence scoring based on model certainty / historical reliability
-
-risk categorization such as:
-
-Low Delay Risk
-
-Medium Delay Risk
-
-High Delay Risk
-
-Why this matters
-
-Two trips can have the same ETA but very different reliability. This feature helps communicate uncertainty in a usable way.
-
-### 3. Slice-Level Evaluation
-
-The system does not only evaluate overall performance. It also evaluates quality at more granular levels.
-
-Slice dimensions
-
-zone × hour
-
-corridor × hour
-
-time-of-day slices
-
-potentially high-demand vs low-demand slices
-
-Metrics used
-
-MAE
-
-RMSE
-
-R²
-
-error concentration across slices
-
-Why this matters
-
-A model can look good overall while performing poorly for specific zones or specific hours. Slice-level evaluation makes the system operationally more trustworthy.
-
-### 4. Corridor Intelligence
-
-A corridor is defined as:
-
-Pickup Zone → Dropoff Zone
-
-This is one of the strongest and most unique parts of the project.
-
-Corridor-level analytics
+A **corridor** is defined as: `Pickup Zone → Dropoff Zone`
 
 For each corridor, the system computes:
 
-average duration
+| Metric | Description |
+|---|---|
+| Average duration | Typical trip time on this route |
+| Speed proxy | Estimated travel efficiency |
+| Reliability score | How consistent the corridor is |
+| Volatility index | How unpredictable delays are |
+| High-delay flag | Whether this route is delay-prone |
+| Corridor ranking | Relative performance across all routes |
 
-average speed proxy
+---
 
-reliability score
+### 5. 📉 Reliability and Volatility Analytics
 
-volatility index
+Beyond "how long does this trip take?" the system asks:
 
-high-delay detection
+- How *consistent* is this route?
+- How *volatile* is this corridor?
+- How *often* does delay occur here?
 
-corridor ranking
+> Average duration alone hides instability. Reliability and volatility make analytics operationally useful.
 
-Why this matters
+---
 
-Most student projects stop at trip-level prediction. Corridor intelligence turns the project into a route-level analytics system and makes it much more valuable from an operations and product perspective.
+### 6. 💵 Pricing Intelligence Engine
 
-### 5. Reliability and Volatility Analytics
+Transparent fare estimation using a structured formula:
 
-The project does not only ask “how long does this trip usually take?” It also asks:
+```
+Fare = Base Fare + (Distance × Rate) + (Time × Rate) × Congestion Multiplier
+```
 
-how consistent is this route?
+**Output per trip:**
+- Expected price
+- Price band (min–max)
+- Price spike indicator
+- Explanatory pricing drivers
 
-how volatile is this corridor?
+---
 
-how often does delay occur here?
+### 7. 📐 Price Band Estimation
 
-Included signals
+Instead of one number, the pricing engine returns a **range** that reflects:
 
-reliability score
+- Congestion variability
+- Corridor volatility
+- Route-specific uncertainty
+- Time-of-day demand patterns
 
-volatility index
+---
 
-high-delay corridor detection
+### 8. ❓ "Why Is This Trip Expensive?" — Explanation Layer
 
-unstable corridor identification
+One of the strongest product differentiators in this system.
 
-Why this matters
+Example explanation factors:
+- Peak-hour demand
+- Congestion multiplier active
+- Long-distance corridor
+- Volatile or delay-prone route
+- Low-speed zone behavior
+- Historical corridor patterns
 
-Average duration alone hides instability. Reliability and volatility make the analytics more realistic and useful.
+> This converts the system from a raw estimator into an **explainable decision-support tool**.
 
-### 6. Pricing Intelligence Engine
+---
 
-The pricing layer estimates a more transparent taxi fare using a pricing formula such as:
+### 9. ⚡ Price Spike Detection
 
-Base Fare + Distance Cost + Time Cost + Congestion Multiplier
+Identifies and flags unusually expensive scenarios:
 
-Outputs
+- Abnormal congestion periods
+- Demand-heavy time windows
+- Route-specific surge behavior
+- Corridor volatility effects
 
-expected price
+---
 
-price band (min–max)
+### 10. 🔄 What-If Simulation
 
-price spike indicator
+Scenario comparison for the same trip under different conditions.
 
-explanatory price drivers
+**Supported simulations:**
+- Peak vs non-peak travel
+- Same route at different departure times
+- Different corridor assumptions
+- ETA and price comparison across time windows
 
-Why this matters
+**Example questions answered:**
+- *What happens if I leave 30 minutes later?*
+- *Will this trip be cheaper after peak hours?*
+- *Which time window is most reliable?*
 
-Most systems show one fare estimate without context. This project adds a more decision-friendly and interpretable pricing layer.
+---
 
-### 7. Price Band Estimation
+### 11. 🗺️ Spatial Intelligence Dashboards
 
-Instead of returning only one number, the pricing engine produces a range.
+React-based interactive dashboards for spatial and operational analysis.
 
-Example logic
+| Dashboard | Purpose |
+|---|---|
+| ETA Simulator | Interactive trip duration prediction |
+| Pricing Simulator | Fare estimation with band visualization |
+| Zone Intelligence Heatmap | Demand, duration, price, volatility by zone |
+| Corridor Dashboard | Route-level reliability and ranking |
+| Monitoring Dashboard | Model metrics, drift, error tracking |
 
-The price band can reflect:
+**Heatmap metrics:** demand · average duration · average price · volatility · travel efficiency
 
-congestion variability
+---
 
-corridor volatility
+### 12. 📡 Monitoring and Drift Awareness
 
-route-specific uncertainty
+The system is designed like a **deployable ML product**, not a one-time notebook.
 
-time-of-day demand variation
+**Monitoring features:**
+- Model performance tracking over time
+- Error by zone × hour
+- Prediction interval coverage tracking
+- Reliability of confidence ranges
 
-Why this matters
+**Drift detection:**
+- Feature distribution shifts
+- Demand pattern drift
+- Route behavior changes
+- Performance degradation signals
 
-This aligns better with real-world ride pricing behavior, where exact fare can fluctuate.
-
-### 8. “Why Expensive?” Explanation Layer
-
-This feature improves pricing transparency by telling the user why the trip cost is elevated.
-
-Example explanation factors
-
-peak-hour demand
-
-congestion multiplier
-
-long-distance corridor
-
-volatile route
-
-historically delay-prone path
-
-low-speed zone behavior
-
-Why this matters
-
-This is one of the biggest product differentiators. It converts the project from a raw estimator into an explainable decision-support system.
-
-### 9. Price Spike Detection
-
-The system identifies unusually expensive scenarios and flags them.
-
-Use cases
-
-abnormal congestion
-
-demand-heavy hours
-
-route-specific surge behavior
-
-corridor volatility effects
-
-Why this matters
-
-This makes the pricing system more realistic and useful for comparative analysis.
-
-### 10. What-If Simulation
-
-The system allows scenario comparison for the same trip under different travel conditions.
-
-Simulations supported
-
-peak vs non-peak travel
-
-same route at different times
-
-different corridor behavior assumptions
-
-pricing and ETA comparison across time windows
-
-Why this matters
-
-This is a decision-support feature, not just a prediction feature. It helps answer:
-
-What happens if I leave later?
-
-Will this trip be cheaper after peak time?
-
-Which time window is more reliable?
-
-### 11. Spatial Intelligence Dashboards
-
-The project includes React-based interactive dashboards for spatial and operational analysis.
-
-Dashboard modules
-
-ETA Simulator Page
-
-Pricing Simulator Page
-
-Zone Intelligence Heatmap
-
-Corridor Dashboard
-
-Monitoring Dashboard
-
-Heatmap metrics
-
-demand
-
-average duration
-
-average price
-
-volatility
-
-speed / travel efficiency
-
-Why this matters
-
-The dashboards make the project product-like and allow analysis beyond raw model output.
-
-### 12. Monitoring and Drift Awareness
-
-This project goes beyond offline training and includes a monitoring perspective.
-
-Monitoring features
-
-model performance tracking
-
-error by zone × hour
-
-interval coverage tracking
-
-reliability of prediction range
-
-recent vs training distribution comparison
-
-Drift awareness
-
-The system can compare new behavior against historical/training patterns to identify:
-
-feature drift
-
-demand pattern drift
-
-route behavior shifts
-
-performance degradation
-
-Why this matters
-
-This is one of the clearest signals that the project is designed like a deployable ML system rather than a one-time notebook experiment.
-
-### 13. Full-Stack System Design
-
-This project is intentionally structured as a multi-layer system.
-
-Stack
-
-Frontend: React
-
-Backend: FastAPI
-
-Database: PostgreSQL
-
-ML Layer: prediction, interval estimation, confidence scoring
-
-Analytics Layer: corridor and zone metrics
-
-Monitoring Layer: model metrics and drift reports
-
-Why this matters
-
-This shows software engineering depth, not just data science work.
+---
 
 ## 🏗️ System Architecture
 
-React Frontend  
-↓  
-FastAPI Backend  
-↓  
-Feature Engineering Layer  
-↓  
-ETA Prediction Engine + Interval + Confidence + Risk  
-↓  
-Pricing Intelligence Engine  
-↓  
-PostgreSQL Analytics Store  
-↓  
-Dashboards + Monitoring + Heatmaps  
+```
+React Frontend
+      ↓
+FastAPI Backend
+      ↓
+Feature Engineering Layer
+      ↓
+ETA Prediction Engine (Interval + Confidence + Risk)
+      ↓
+Pricing Intelligence Engine
+      ↓
+PostgreSQL Analytics Store
+      ↓
+Dashboards + Monitoring + Heatmaps
+```
+
+---
 
 ## 🗂️ Project Structure
 
-project/  
-│  
-├── backend/  
-│   ├── app/  
-│   │   ├── main.py  
-│   │   ├── routers/  
-│   │   ├── services/  
-│   │   ├── repositories/  
-│   │   ├── schemas/  
-│   │   └── jobs/  
-│   └── requirements.txt  
-│  
-├── frontend/  
-│   ├── src/  
-│   │   ├── pages/  
-│   │   ├── components/  
-│   │   └── api/  
-│   └── package.json  
-│  
-├── notebooks/  
-├── data/  
-├── models/  
-└── README.md  
+```
+project/
+│
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── routers/
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   ├── schemas/
+│   │   └── jobs/
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── src/
+│   │   ├── pages/
+│   │   ├── components/
+│   │   └── api/
+│   └── package.json
+│
+├── notebooks/
+├── data/
+├── models/
+└── README.md
+```
 
-## 🗄️ Database Tables
+---
 
-The PostgreSQL layer stores analytics-ready outputs for visualization and monitoring.
+## 🗄️ Database Schema
 
-Main tables
+| Table | Purpose |
+|---|---|
+| `zone_metrics_hourly` | Zone-level heatmap analytics |
+| `corridor_metrics_hourly` | Corridor performance analytics |
+| `prediction_logs` | Per-trip prediction tracking |
+| `model_metrics` | Model monitoring history |
+| `drift_reports` | Drift detection and health reports |
 
-zone_metrics_hourly
+---
 
-corridor_metrics_hourly
+## 🔌 API Reference
 
-prediction_logs
+### Prediction APIs
 
-model_metrics
+```
+POST /predict-eta       → ETA + interval + confidence + risk
+POST /estimate-price    → Price band + spike flag + explanation
+```
 
-drift_reports
+### Analytics APIs
 
-Purpose
+```
+GET /heatmap-data       → Zone-level metrics for spatial visualization
+GET /zone-stats         → Aggregated zone performance
+GET /corridor-stats     → Corridor reliability and ranking
+```
 
-zone-level heatmap analytics
+### Monitoring APIs
 
-corridor performance analytics
+```
+GET /model-metrics      → Model performance and drift summary
+```
 
-prediction tracking
-
-monitoring history
-
-drift and health reporting
-
-## 🔌 API Endpoints
-
-Prediction APIs
-
-POST /predict-eta
-POST /estimate-price
-Analytics APIs
-GET /heatmap-data
--GET /zone-stats
-GET /corridor-stats
-Monitoring APIs
-GET /model-metrics
-
-These endpoints allow the frontend to serve real-time or simulated analytics through a clean service layer.
+---
 
 ## 📊 Workflow Summary
 
-1. Load raw taxi trip data  
-2. Clean and validate records  
-3. Engineer features such as time, distance, and corridor  
-4. Perform exploratory analysis  
-5. Train ETA prediction models  
-6. Evaluate using MAE, RMSE, and R²  
-7. Add prediction interval and confidence scoring  
-8. Classify delay risk  
-9. Build pricing intelligence layer  
-10. Generate zone- and corridor-level aggregates  
-11. Store results in PostgreSQL  
-12. Serve outputs through FastAPI  
-13. Visualize insights in React dashboards  
-14. Monitor model quality and detect drift  
+```
+1.  Load raw taxi trip data
+2.  Clean and validate records
+3.  Engineer features (time, distance, corridor)
+4.  Perform exploratory analysis
+5.  Train ETA prediction models
+6.  Evaluate with MAE, RMSE, R²
+7.  Add prediction interval and confidence scoring
+8.  Classify delay risk
+9.  Build pricing intelligence layer
+10. Generate zone- and corridor-level aggregates
+11. Store results in PostgreSQL
+12. Serve outputs through FastAPI
+13. Visualize insights in React dashboards
+14. Monitor model quality and detect drift
+```
 
-## ⚙️ Local Setup Guide
+---
 
-Prerequisites
+## ⚙️ Local Setup
 
-Python 3.10+
+### Prerequisites
 
-Node.js 18+
+- Python 3.10+
+- Node.js 18+
+- PostgreSQL
 
-PostgreSQL
+---
 
-#1. Clone Repository
+### 1. Clone the Repository
 
-git clone <your-repo-url>  
-cd <repo-name>  
+```bash
+git clone <your-repo-url>
+cd <repo-name>
+```
 
-#2. Setup PostgreSQL
+---
 
-CREATE DATABASE taxi_ai;  
+### 2. Set Up PostgreSQL
 
-Set environment variable:
+```sql
+CREATE DATABASE taxi_ai;
+```
 
-#Linux / Mac
+Set the environment variable:
 
-export DATABASE_URL="postgresql+psycopg2://USER:PASSWORD@localhost:5432/taxi_ai"  
+```bash
+# Linux / macOS
+export DATABASE_URL="postgresql+psycopg2://USER:PASSWORD@localhost:5432/taxi_ai"
 
-#Windows
+# Windows
+set DATABASE_URL=postgresql+psycopg2://USER:PASSWORD@localhost:5432/taxi_ai
+```
 
-set DATABASE_URL=postgresql+psycopg2://USER:PASSWORD@localhost:5432/taxi_ai  
+---
 
-#3. Backend Setup
+### 3. Backend Setup
 
-cd backend  
-python -m venv .venv  
+```bash
+cd backend
+python -m venv .venv
 
-Activate environment:
+# Activate — macOS/Linux
+source .venv/bin/activate
 
-#Mac / Linux
+# Activate — Windows
+.venv\Scripts\activate
 
-source .venv/bin/activate  
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
 
-#Windows
+| Service | URL |
+|---|---|
+| Backend API | http://127.0.0.1:8000 |
+| Swagger Docs | http://127.0.0.1:8000/docs |
 
-.venv\Scripts\activate  
+---
 
-Install dependencies:
+### 4. Frontend Setup
 
-pip install -r requirements.txt  
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-Run backend server:
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
 
-uvicorn app.main:app --reload  
+---
 
-#Backend:
+## 📈 What Makes This Different
 
-http://127.0.0.1:8000  
+### Compared to a typical ML project
 
-Swagger Docs:
+| Typical ML Project | This System |
+|---|---|
+| Single prediction output | ETA + interval + confidence + risk |
+| One fare estimate | Price band + explanation + spike flag |
+| Overall model evaluation | Slice-level evaluation by zone × hour |
+| No route awareness | Full corridor reliability analytics |
+| No simulation | What-if comparison across time windows |
+| No monitoring | Drift detection + coverage tracking |
+| Notebook only | Full-stack: React + FastAPI + PostgreSQL |
 
-http://127.0.0.1:8000/docs  
-
-4. Frontend Setup
-
-cd frontend  
-npm install  
-npm run dev  
-
-Frontend:
-
-http://localhost:5173  
-
-## 📈 Key Highlights
-
-What makes this project stronger than a typical ML project?
-
--not limited to one prediction output
-
--adds uncertainty and confidence
-
--combines ETA + pricing + corridor analytics
-
--includes explainability and simulation
-
--has dashboard-based exploration
-
--includes monitoring and drift awareness
-
--built as a complete full-stack system
-
--What makes it relevant in the market?
-
--improves trust in ETA and price estimates
-
--makes pricing less opaque
-
--supports smarter rider/operator decisions
-
--exposes route-level intelligence
-
--bridges analytics, prediction, and product design
+---
 
 ## 🚀 Future Scope
 
--real-time traffic integration
+- [ ] Real-time traffic data integration
+- [ ] Quantile regression for improved interval estimation
+- [ ] Automated retraining pipeline
+- [ ] Model versioning and rollback
+- [ ] Multi-city deployment support
+- [ ] User authentication and saved routes
+- [ ] Route recommendation layer
+- [ ] Live monitoring alerts
 
--quantile regression for improved interval estimation
-
--automated retraining pipeline
-
--model versioning
-
--multi-city deployment
-
--user authentication and saved routes
-
--route recommendation layer
-
--live monitoring alerts
+---
 
 ## 👩‍💻 Authors
 
-Surbhi Agarwal
-Triveni Reddy  
+**Surbhi Agarwal** · **Triveni Reddy**
+
+---
 
 ## ⭐ Final Positioning
 
-This project is not just a taxi trip duration predictor.
+This is not a taxi trip duration predictor.
 
-It is a Intelligence and Decision Support System that combines:
+It is a **Mobility Intelligence and Decision Support System** that combines:
 
--ETA prediction
+- ETA prediction with uncertainty
+- Pricing transparency with explanation
+- Corridor reliability analytics
+- Scenario simulation
+- Operational monitoring
 
--uncertainty estimation
-
--pricing transparency
-
--corridor reliability analytics
-
--simulation
-
--monitoring
-
--dashboard-driven exploration
-
-to fill a real gap between basic predictive modeling and practical, transparent mobility decision systems.
+Built to fill the gap between a basic ML model and a practical, transparent, deployable mobility product.
