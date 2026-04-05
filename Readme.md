@@ -522,19 +522,12 @@ drift and health reporting
 Prediction APIs
 
 POST /predict-eta
-
 POST /estimate-price
-
 Analytics APIs
-
 GET /heatmap-data
-
-GET /zone-stats
-
+-GET /zone-stats
 GET /corridor-stats
-
 Monitoring APIs
-
 GET /model-metrics
 
 These endpoints allow the frontend to serve real-time or simulated analytics through a clean service layer.
