@@ -8,17 +8,17 @@ Unlike traditional taxi prediction projects that only return a single trip durat
 
 This project analyzes historical taxi trip data and builds a production-style analytics system that can:
 
-predict trip duration (ETA)
+-predict trip duration (ETA)
 
-estimate prediction intervals (P50–P90)
+-estimate prediction intervals (P50–P90)
 
-calculate confidence score
+-calculate confidence score
 
-classify delay risk
+-classify delay risk
 
-estimate fair price bands (min–max)
+-estimate fair price bands (min–max)
 
-explain why a trip is expensive
+-explain why a trip is expensive
 
 simulate pricing and ETA under different time scenarios
 
