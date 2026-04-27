@@ -44,7 +44,7 @@ IF NOT EXIST models_saved\RandomForest.pkl (
 
 echo [4/4] Starting servers...
 REM Fixed uvicorn command: removed 'app.' since main.py is in backend root
-start "TaxiIQ Backend" cmd /k "cd backend && ..\.venv\Scripts\activate && uvicorn main:app --reload"
+start "TaxiIQ Backend" cmd /k "cd backend && .venv\Scripts\activate && uvicorn main:app --reload"
 timeout /t 3
 start "TaxiIQ Frontend" cmd /k "cd frontend && npm run dev"
 

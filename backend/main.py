@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # 
-from routers import predict, analytics, nearby, admin_ops, feedback, auth
+from routers import predict, analytics, nearby, admin_ops, feedback, auth, traffic
 app = FastAPI(
     title="Taxi Intelligence API",
     description="ETA + Pricing Intelligence + Corridor Analytics",
@@ -25,6 +25,7 @@ app.include_router(analytics.router, prefix="/api", tags=["Analytics"])
 app.include_router(nearby.router,    prefix="/api", tags=["Nearby"])
 app.include_router(admin_ops.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(feedback.router,  prefix="/api", tags=["Feedback"])
+app.include_router(traffic.router, prefix="/traffic", tags=["traffic"])
 
 @app.get("/")
 def root():

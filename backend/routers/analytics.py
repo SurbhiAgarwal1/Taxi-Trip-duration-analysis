@@ -238,6 +238,10 @@ def zone_map_data():
     if df.empty:
         return {"error": "Run training script first"}
     
+    # Count unique hours per zone to compute per-hour and daily averages
+    hours_per_zone = df.groupby("pickup_zone")["pickup_hour"].nunique().reset_index()
+    hours_per_zone.columns = ["pickup_zone", "num_hours"]
+    
     zone_agg = df.groupby(["pickup_zone", "pickup_borough"]).agg(
         avg_duration=("avg_duration", "mean"),
         avg_price=("avg_price", "mean"),
@@ -246,6 +250,8 @@ def zone_map_data():
         delay_ratio=("delay_ratio", "mean"),
         cluster_id=("cluster_id", "first")
     ).reset_index()
+    
+    zone_agg = zone_agg.merge(hours_per_zone, on="pickup_zone", how="left")
     
     clusters = load_clusters().get("zone_clusters", {})
     
@@ -278,6 +284,11 @@ def zone_map_data():
         if coords:
             matches += 1
             c_id = row["cluster_id"]
+            total_trips = int(row["trip_count"]) if pd.notna(row["trip_count"]) else 0
+            num_hours = int(row["num_hours"]) if pd.notna(row["num_hours"]) and row["num_hours"] > 0 else 1
+            trips_per_hour = round(total_trips / num_hours, 1)
+            daily_avg = round(total_trips / max(num_hours / 24, 1), 1)
+            
             result.append({
                 "zone": zone,
                 "borough": row["pickup_borough"],
@@ -286,7 +297,9 @@ def zone_map_data():
                 "avg_duration": round(row["avg_duration"], 2) if pd.notna(row["avg_duration"]) else None,
                 "avg_price": round(row["avg_price"], 2) if pd.notna(row["avg_price"]) else None,
                 "avg_speed": round(row["avg_speed"], 2) if pd.notna(row["avg_speed"]) else None,
-                "trip_count": int(row["trip_count"]) if pd.notna(row["trip_count"]) else 0,
+                "trip_count": total_trips,
+                "trips_per_hour": trips_per_hour,
+                "daily_avg": daily_avg,
                 "delay_ratio": round(row["delay_ratio"], 2) if pd.notna(row["delay_ratio"]) else None,
                 "cluster_name": clusters.get(str(int(c_id))) if pd.notna(c_id) else "Unknown"
             })

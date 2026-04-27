@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import * as api from '../api/client'
+import { jwtDecode } from "jwt-decode";
 
 const AuthContext = createContext()
 
@@ -10,8 +11,15 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const saved = localStorage.getItem('taxi_user')
-    if (saved) setUser(JSON.parse(saved))
+    const token = localStorage.getItem('taxi_token')
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUser({ ...decoded, is_admin: decoded.is_admin });
+      } catch (err) {
+        localStorage.removeItem('taxi_token');
+      }
+    }
     setLoading(false)
   }, [])
 
@@ -19,8 +27,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data } = await api.login({ username, password })
       if (data.status === 'success') {
-        setUser(data.user)
-        localStorage.setItem('taxi_user', JSON.stringify(data.user))
+        const decoded = jwtDecode(data.token);
+        setUser({ ...decoded, is_admin: decoded.is_admin });
+        localStorage.setItem('taxi_token', data.token);
         return { success: true }
       }
     } catch (err) {
@@ -32,8 +41,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data } = await api.signup({ username, email, password })
       if (data.status === 'success') {
-        setUser(data.user)
-        localStorage.setItem('taxi_user', JSON.stringify(data.user))
+        const decoded = jwtDecode(data.token);
+        setUser({ ...decoded, is_admin: decoded.is_admin });
+        localStorage.setItem('taxi_token', data.token);
         return { success: true }
       }
     } catch (err) {
@@ -43,7 +53,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('taxi_user')
+    localStorage.removeItem('taxi_token')
   }
 
   const value = {

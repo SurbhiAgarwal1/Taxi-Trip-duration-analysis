@@ -1,36 +1,53 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { submitTripFeedbackExtended } from '../api/client'
+import { useTheme } from '../context/ThemeContext'
 
-export default function SubmitTrip() {
+export default function RateYourTrip() {
   const { user } = useAuth()
+  const { darkMode } = useTheme()
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   
-  const [form, setForm] = useState({
-    pickup_location: '',
-    drop_location: '',
-    pickup_time: '',
-    dropoff_time: '',
-    price: '',
-    trip_distance: ''
-  })
+  const [pickupLocation, setPickupLocation] = useState("")
+  const [dropoffLocation, setDropoffLocation] = useState("")
+  const [distance, setDistance] = useState("")
+  const [tripDate, setTripDate] = useState("")
+  const [tripTime, setTripTime] = useState("")
+  const [rating, setRating] = useState(5)
+  const [actualPrice, setActualPrice] = useState("")
 
-  // Calculate duration in real-time
-  const [calcDuration, setCalcDuration] = useState(0)
-  
   useEffect(() => {
-    if (form.pickup_time && form.dropoff_time) {
-      const p = new Date(form.pickup_time)
-      const d = new Date(form.dropoff_time)
-      const diffHours = (d - p) / (1000 * 60 * 60)
-      setCalcDuration(diffHours > 0 ? diffHours.toFixed(2) : 0)
+    // Fetch locations and distance from last route
+    const saved = localStorage.getItem("lastRoute");
+    if (saved) {
+      const route = JSON.parse(saved);
+      setPickupLocation(route.pickupLocation || "");
+      setDropoffLocation(route.dropoffLocation || "");
+      setDistance(route.distance_km || "");
     }
-  }, [form.pickup_time, form.dropoff_time])
+
+    // Fetch current date and time automatically
+    const now = new Date();
+    setTripDate(now.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }));
+    setTripTime(now.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit"
+    }));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!actualPrice) {
+      setError("Please enter the exact price paid for the trip.");
+      return;
+    }
     setLoading(true)
     setError('')
     
@@ -38,178 +55,155 @@ export default function SubmitTrip() {
       user_name: user?.username || 'Guest',
       user_email: user?.email || '',
       user_role: user?.role || 'user',
-      ...form,
-      price: parseFloat(form.price),
-      trip_distance: parseFloat(form.trip_distance) || 0.0,
-      pickup_time: new Date(form.pickup_time).toISOString(),
-      dropoff_time: new Date(form.dropoff_time).toISOString()
+      pickup_location: pickupLocation,
+      drop_location: dropoffLocation,
+      pickup_time: new Date().toISOString(),
+      dropoff_time: new Date().toISOString(),
+      price: parseFloat(actualPrice),
+      trip_distance: parseFloat(distance) || 0,
+      rating: rating
     }
 
     try {
-      const { data } = await submitTripFeedbackExtended(payload)
-      if (data.status === 'success') {
-        setSuccess(true)
-        setForm({
-          pickup_location: '',
-          drop_location: '',
-          pickup_time: '',
-          dropoff_time: '',
-          price: '',
-          trip_distance: ''
-        })
-      }
+      await submitTripFeedbackExtended(payload)
+      setSuccess(true)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to submit trip feedback.')
+      setError('Failed to submit feedback. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
+  const primaryColor = "#FFB800";
+  const secondaryColor = "#003580";
+
   if (success) {
     return (
-      <div className="max-w-2xl mx-auto mt-20 text-center animate-in fade-in zoom-in duration-500">
-        <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-8">
-          <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h1 className="text-4xl font-black text-[#001C44] mb-4">Trip Submitted!</h1>
-        <p className="text-slate-500 text-lg mb-10">Your feedback has been recorded and will be used to improve our AI models.</p>
-        <button 
-          onClick={() => setSuccess(false)}
-          className="btn-primary"
-        >
-          Submit Another Trip
+      <div style={{ maxWidth: "600px", margin: "100px auto", textAlign: "center", color: secondaryColor }}>
+        <div style={{ fontSize: "64px", marginBottom: "24px" }}>⭐</div>
+        <h1 style={{ fontSize: "32px", fontWeight: "900", marginBottom: "16px" }}>Trip Rated Successfully!</h1>
+        <p style={{ color: "#6B7280", marginBottom: "32px", fontWeight: "600" }}>
+          Thank you for sharing your experience. We've recorded the fare of ${actualPrice}.
+        </p>
+        <button onClick={() => setSuccess(false)} style={{
+          padding: "14px 40px", borderRadius: "12px", background: primaryColor,
+          color: secondaryColor, border: "none", fontWeight: "800", cursor: "pointer",
+          boxShadow: "0 4px 6px rgba(255, 184, 0, 0.3)"
+        }}>
+          RATE ANOTHER TRIP
         </button>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10 pb-20">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-4xl font-black text-[#001C44] brand-font tracking-tight">
-          Submit Trip <span className="text-[#FFB800]">Feedback</span>
-        </h1>
-        <p className="text-slate-400 font-medium">Help us improve NYC Taxi Intelligence by reporting your real trip experiences.</p>
+    <div style={{ color: darkMode ? "#F9FAFB" : secondaryColor, maxWidth: "750px", margin: "0 auto" }}>
+      <div style={{ marginBottom: "32px" }}>
+        <h1 style={{ fontSize: "32px", fontWeight: "900", marginBottom: "8px" }}>Rate Your Trip</h1>
+        <p style={{ color: "#6B7280", fontWeight: "600" }}>
+          Confirm your trip details and let us know how it went.
+        </p>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-xl border border-slate-100 rounded-[40px] p-10 shadow-2xl shadow-slate-200/40">
-        {error && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl flex items-center gap-3 font-medium">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Locations */}
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[2px] ml-1">Pickup Location</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. JFK Airport Terminal 4"
-                  className="input-field"
-                  value={form.pickup_location}
-                  onChange={e => setForm({...form, pickup_location: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[2px] ml-1">Drop-off Location</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Times Square"
-                  className="input-field"
-                  value={form.drop_location}
-                  onChange={e => setForm({...form, drop_location: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[2px] ml-1">Estimated distance (miles)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  required
-                  placeholder="e.g. 15.5"
-                  className="input-field"
-                  value={form.trip_distance}
-                  onChange={e => setForm({...form, trip_distance: e.target.value})}
-                />
-              </div>
+      <div style={{ 
+        background: darkMode ? "#1F2937" : "#FFFFFF", 
+        borderRadius: "16px", 
+        padding: "32px",
+        boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+        border: darkMode ? "1px solid #374151" : `1px solid #E5E7EB`
+      }}>
+        <form onSubmit={handleSubmit} style={{ display: "grid", gap: "24px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div style={{ padding: "14px", background: "#F8F9FA", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+              <span style={{ fontSize: "11px", color: "#6B7280", fontWeight: "800", textTransform: "uppercase" }}>Trip Date</span>
+              <p style={{ fontWeight: "700", margin: "4px 0 0", color: secondaryColor }}>{tripDate}</p>
             </div>
-
-            {/* Times and Price */}
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[2px] ml-1">Pickup Time</label>
-                <input
-                  type="datetime-local"
-                  required
-                  className="input-field"
-                  value={form.pickup_time}
-                  onChange={e => setForm({...form, pickup_time: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[2px] ml-1">Drop-off Time</label>
-                <input
-                  type="datetime-local"
-                  required
-                  className="input-field"
-                  value={form.dropoff_time}
-                  onChange={e => setForm({...form, dropoff_time: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[2px] ml-1">Final Price ($)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  placeholder="e.g. 45.00"
-                  className="input-field"
-                  value={form.price}
-                  onChange={e => setForm({...form, price: e.target.value})}
-                />
-              </div>
+            <div style={{ padding: "14px", background: "#F8F9FA", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+              <span style={{ fontSize: "11px", color: "#6B7280", fontWeight: "800", textTransform: "uppercase" }}>Trip Time</span>
+              <p style={{ fontWeight: "700", margin: "4px 0 0", color: secondaryColor }}>{tripTime}</p>
             </div>
           </div>
 
-          {/* Duration Summary */}
-          <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#003580] text-[#FFB800] rounded-2xl flex items-center justify-center">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Calculated Duration</p>
-                <p className="text-2xl font-black text-[#001C44]">{calcDuration} <span className="text-lg">hours</span></p>
-              </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
+            <div>
+              <label style={{ fontSize: "11px", fontWeight: "800", color: secondaryColor, marginBottom: "8px", display: "block", textTransform: "uppercase" }}>Pickup</label>
+              <input readOnly value={pickupLocation} style={{
+                width: "100%", padding: "12px", borderRadius: "10px",
+                background: "#F3F4F6", border: "1px solid #E5E7EB",
+                color: "#6B7280", fontSize: "13px", fontWeight: "700"
+              }} />
             </div>
-            <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${calcDuration > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
-              {calcDuration > 0 ? 'Valid Trip' : 'Awaiting Times'}
+            <div>
+              <label style={{ fontSize: "11px", fontWeight: "800", color: secondaryColor, marginBottom: "8px", display: "block", textTransform: "uppercase" }}>Dropoff</label>
+              <input readOnly value={dropoffLocation} style={{
+                width: "100%", padding: "12px", borderRadius: "10px",
+                background: "#F3F4F6", border: "1px solid #E5E7EB",
+                color: "#6B7280", fontSize: "13px", fontWeight: "700"
+              }} />
+            </div>
+            <div>
+              <label style={{ fontSize: "11px", fontWeight: "800", color: secondaryColor, marginBottom: "8px", display: "block", textTransform: "uppercase" }}>Distance (km)</label>
+              <input readOnly value={distance} style={{
+                width: "100%", padding: "12px", borderRadius: "10px",
+                background: "#F3F4F6", border: "1px solid #E5E7EB",
+                color: "#6B7280", fontSize: "13px", fontWeight: "700"
+              }} />
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading || calcDuration <= 0}
-            className="w-full h-18 bg-gradient-to-br from-[#003580] to-[#001C44] text-white rounded-[24px] font-black text-sm uppercase tracking-[3px] shadow-2xl shadow-blue-900/30 transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed py-5"
-          >
-            {loading ? 'Processing Feedback...' : 'Submit Feedback'}
+          <div style={{ background: "#FFFBEB", padding: "24px", borderRadius: "16px", border: `2px dashed ${primaryColor}` }}>
+            <label style={{ fontSize: "14px", fontWeight: "900", color: secondaryColor, marginBottom: "12px", display: "block", textAlign: "center" }}>
+              WHAT WAS THE EXACT PRICE PAID? ($)
+            </label>
+            <input 
+              type="number" 
+              step="0.01"
+              placeholder="Enter fare amount (e.g. 24.50)"
+              value={actualPrice}
+              onChange={(e) => setActualPrice(e.target.value)}
+              style={{
+                width: "100%", padding: "16px", borderRadius: "12px",
+                background: "#FFFFFF", border: `2px solid ${secondaryColor}`,
+                color: secondaryColor, fontSize: "20px", fontWeight: "900",
+                textAlign: "center"
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: "12px", fontWeight: "800", color: secondaryColor, marginBottom: "12px", display: "block", textTransform: "uppercase" }}>Overall Rating</label>
+            <div style={{ display: "flex", gap: "16px", justifyContent: "center" }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <button 
+                  key={star} 
+                  type="button"
+                  onClick={() => setRating(star)}
+                  style={{
+                    fontSize: "32px", background: "none", border: "none", cursor: "pointer",
+                    filter: star <= rating ? "none" : "grayscale(1) opacity(0.2)",
+                    transition: "all 0.2s", transform: star <= rating ? "scale(1.1)" : "scale(1)"
+                  }}
+                >
+                  ⭐
+                </button>
+              ))}
+            </div>
+          </div>
+
+
+          <button type="submit" disabled={loading} style={{
+            padding: "18px", borderRadius: "12px", background: secondaryColor,
+            color: "#FFFFFF", fontWeight: "900", cursor: loading ? "not-allowed" : "pointer",
+            border: "none", fontSize: "16px", letterSpacing: "1px"
+          }}>
+            {loading ? "SUBMITTING..." : "CONFIRM & SUBMIT RATING"}
           </button>
         </form>
+
+        {error && (
+          <p style={{ color: "#EF4444", fontWeight: "700", textAlign: "center", marginTop: "16px" }}>{error}</p>
+        )}
       </div>
-
-
     </div>
   )
 }

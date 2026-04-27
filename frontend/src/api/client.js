@@ -19,3 +19,4 @@ export const signup          = (data) => api.post('/auth/signup', data)
 
 // Extended Feedback
 export const submitTripFeedbackExtended = (data) => api.post('/feedback/submit-trip-extended', data)
+export const fetchLiveTraffic = (params) => axios.get('/traffic/live', { params })

@@ -9,3 +9,7 @@ requests
 seaborn
 matplotlib
 python-multipart
+httpx
+email-validator
+sqlalchemy
+pyjwt

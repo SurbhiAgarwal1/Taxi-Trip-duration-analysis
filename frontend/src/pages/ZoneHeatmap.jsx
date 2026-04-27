@@ -1,149 +1,141 @@
-import { useState, useEffect } from 'react'
-import { getHeatmap } from '../api/client'
+import { useEffect, useState } from 'react'
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
+import { getZoneMapData } from '../api/client'
+import { useTheme } from '../context/ThemeContext'
 
-const METRICS = [
-  { value: 'avg_price',    label: 'Avg Price',     unit: '$',   color: '#3b82f6' },
-  { value: 'avg_duration', label: 'Avg Duration',   unit: ' min', color: '#8b5cf6' },
-  { value: 'avg_speed',    label: 'Avg Speed',      unit: ' mph', color: '#10b981' },
-  { value: 'delay_ratio',  label: 'Delay Ratio',    unit: 'x',   color: '#ef4444' },
-  { value: 'volatility',   label: 'Volatility',     unit: '',    color: '#f59e0b' },
-  { value: 'trip_count',   label: 'Trip Volume',    unit: '',    color: '#6366f1' },
-]
+export default function BusyAreasMap() {
+  const { darkMode } = useTheme();
+  const [mapData, setMapData] = useState([])
+  const [loading, setLoading] = useState(true)
 
-function getColor(value, min, max, hex) {
-  const pct = max === min ? 0.5 : (value - min) / (max - min)
-  const alpha = 0.1 + pct * 0.6
-  return hex + Math.round(alpha * 255).toString(16).padStart(2, '0')
-}
-
-export default function ZoneHeatmap() {
-  const [metric, setMetric] = useState('avg_price')
-  const [data, setData] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [search, setSearch] = useState('')
-
-  const load = (m) => {
-    setLoading(true)
-    getHeatmap(m)
-      .then(r => setData(r.data?.data || []))
-      .catch(() => setData([]))
+  useEffect(() => {
+    getZoneMapData()
+      .then(r => setMapData(r.data || []))
+      .catch(() => {})
       .finally(() => setLoading(false))
-  }
+  }, [])
 
-  useEffect(() => { load(metric) }, [metric])
+  const sortedData = [...mapData].sort((a, b) => (b.trip_count || 0) - (a.trip_count || 0));
+  const topZones = sortedData.slice(0, 5);
+  const totalTrips = mapData.reduce((acc, curr) => acc + (curr.trip_count || 0), 0);
+  
+  const boroughCounts = mapData.reduce((acc, curr) => {
+    const b = curr.borough || "Unknown";
+    acc[b] = (acc[b] || 0) + (curr.trip_count || 0);
+    return acc;
+  }, {});
+  
+  const busiestBorough = Object.entries(boroughCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
 
-  const metaObj = METRICS.find(m => m.value === metric)
-  const filtered = data.filter(d =>
-    !search || d.pickup_zone?.toLowerCase().includes(search.toLowerCase()) ||
-    d.pickup_borough?.toLowerCase().includes(search.toLowerCase())
-  )
-  const values = filtered.map(d => d[metric]).filter(Boolean)
-  const min = Math.min(...values)
-  const max = Math.max(...values)
+  // Compute average trips per hour and daily average across all zones
+  const totalTripsPerHour = mapData.reduce((acc, curr) => acc + (curr.trips_per_hour || 0), 0);
+  const avgTripsPerHour = mapData.length > 0 ? Math.round(totalTripsPerHour / mapData.length) : 0;
+  const totalDailyAvg = mapData.reduce((acc, curr) => acc + (curr.daily_avg || 0), 0);
+
+  const maxVal = mapData.length > 0 ? Math.max(...mapData.map(d => d.trip_count || 0)) : 0;
+
+  const primaryColor = "#FFB800";
+  const secondaryColor = "#003580";
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="border-b border-gray-300 pb-4">
-        <h1 className="text-2xl font-semibold text-gray-800">Zone Heatmap</h1>
-        <p className="text-gray-500 text-sm mt-1">Compare zones by price, speed, delay, demand, and volatility</p>
+    <div style={{ color: darkMode ? "#F9FAFB" : secondaryColor }}>
+      <div style={{ marginBottom: "32px" }}>
+        <h1 style={{ fontSize: "32px", fontWeight: "900", marginBottom: "8px" }}>Busy Areas Map</h1>
+        <p style={{ color: "#6B7280", fontWeight: "600" }}>
+          Live visualization of taxi activity density across NYC zones.
+        </p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {METRICS.map(m => (
-          <button
-            key={m.value}
-            onClick={() => setMetric(m.value)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              metric === m.value
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-            }`}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="card">
-        <div className="flex flex-wrap gap-3 items-center mb-4">
-          <input
-            type="text" className="input-field max-w-xs"
-            placeholder="Search zone or borough..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+      <div style={{ 
+        background: darkMode ? "#1F2937" : "white", 
+        padding: "8px", 
+        borderRadius: "16px",
+        boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+        border: darkMode ? "1px solid #374151" : `1px solid #E5E7EB`,
+        height: "500px", 
+        overflow: "hidden",
+        marginBottom: "32px"
+      }}>
+        <MapContainer center={[40.7128, -74.0060]} zoom={12} style={{ height: '100%', width: '100%' }}>
+          <TileLayer
+            url={darkMode 
+              ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            }
+            attribution='&copy; CARTO'
           />
-          <span className="text-gray-500 text-sm">{filtered.length} zones</span>
-
-          {!loading && filtered.length > 0 && (
-            <div className="flex items-center gap-2 text-xs text-gray-500 ml-auto">
-              <span>Low</span>
-              <div className="w-32 h-4 rounded" style={{
-                background: `linear-gradient(to right, ${metaObj.color}20, ${metaObj.color})`
-              }} />
-              <span>High</span>
-            </div>
-          )}
-        </div>
-
-        {loading ? (
-          <div className="text-gray-500 animate-pulse py-8 text-center">Loading...</div>
-        ) : filtered.length === 0 ? (
-          <div className="bg-amber-50 border border-amber-200 text-amber-700 py-6 text-center rounded">
-            No data available
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-            {filtered.map((zone, i) => {
-              const val = zone[metric]
-              const bg = val != null ? getColor(val, min, max, metaObj.color.slice(0,7)) : '#f3f4f6'
-              const rank = i + 1
-              return (
-                <div
-                  key={i}
-                  className="rounded-lg p-3 border border-gray-200 hover:shadow-md transition-shadow cursor-default bg-white"
-                  style={{ background: bg }}
-                  title={`${zone.pickup_zone}: ${val?.toFixed ? val.toFixed(2) : val}${metaObj.unit}`}
-                >
-                  <p className="text-xs text-gray-700 font-medium truncate">{zone.pickup_zone}</p>
-                  <p className="text-xs text-gray-500">{zone.pickup_borough}</p>
-                  <p className="text-sm font-semibold text-gray-800 mt-1">
-                    {metaObj.unit === '$' ? '$' : ''}
-                    {val?.toFixed ? val.toFixed(1) : val}
-                    {metaObj.unit !== '$' ? metaObj.unit : ''}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-        )}
+          {mapData.map((zone, i) => (
+            <CircleMarker
+              key={i}
+              center={[zone.lat, zone.lng]}
+              radius={3 + (zone.trip_count / (maxVal || 1)) * 25}
+              pathOptions={{ color: '#EF4444', fillColor: '#EF4444', fillOpacity: 0.5, weight: 1 }}
+            >
+              <Popup>
+                <div style={{ fontWeight: "800", color: secondaryColor }}>{zone.zone}</div>
+                <div style={{ fontSize: "12px", color: "#6B7280" }}>{zone.trip_count} total trips</div>
+                <div style={{ fontSize: "11px", color: "#3B82F6" }}>{zone.trips_per_hour} trips/hr · {zone.daily_avg} daily avg</div>
+              </Popup>
+            </CircleMarker>
+          ))}
+        </MapContainer>
       </div>
 
-      {!loading && filtered.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card">
-            <h3 className="text-sm font-medium text-gray-800 mb-2">Top 5 Highest</h3>
-            {[...filtered].sort((a,b) => (b[metric]||0)-(a[metric]||0)).slice(0,5).map((z,i) => (
-              <div key={i} className="flex justify-between text-sm py-1 border-b border-gray-100 last:border-0">
-                <span className="text-gray-700">{z.pickup_zone}</span>
-                <span className="text-gray-800 font-medium">
-                  {metaObj.unit === '$' ? '$' : ''}{z[metric]?.toFixed(2)}{metaObj.unit !== '$' ? metaObj.unit : ''}
-                </span>
-              </div>
-            ))}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "24px" }}>
+        {/* Key Stats */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ background: secondaryColor, color: "white", padding: "24px", borderRadius: "16px", textAlign: "center" }}>
+            <p style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", opacity: 0.8, marginBottom: "8px" }}>Total Activity</p>
+            <p style={{ fontSize: "32px", fontWeight: "900" }}>{totalTrips.toLocaleString()}</p>
+            <p style={{ fontSize: "12px", fontWeight: "600", marginTop: "4px" }}>Trips Observed</p>
           </div>
-          <div className="card">
-            <h3 className="text-sm font-medium text-gray-800 mb-2">Top 5 Lowest</h3>
-            {[...filtered].sort((a,b) => (a[metric]||999)-(b[metric]||999)).slice(0,5).map((z,i) => (
-              <div key={i} className="flex justify-between text-sm py-1 border-b border-gray-100 last:border-0">
-                <span className="text-gray-700">{z.pickup_zone}</span>
-                <span className="text-gray-800 font-medium">
-                  {metaObj.unit === '$' ? '$' : ''}{z[metric]?.toFixed(2)}{metaObj.unit !== '$' ? metaObj.unit : ''}
-                </span>
+          <div style={{ background: primaryColor, color: secondaryColor, padding: "24px", borderRadius: "16px", textAlign: "center" }}>
+            <p style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", marginBottom: "8px" }}>Busiest Borough</p>
+            <p style={{ fontSize: "24px", fontWeight: "900" }}>{busiestBorough}</p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div style={{ background: darkMode ? "#1F2937" : "white", padding: "16px", borderRadius: "12px", textAlign: "center", border: darkMode ? "1px solid #374151" : "1px solid #E5E7EB" }}>
+              <p style={{ fontSize: "10px", fontWeight: "800", textTransform: "uppercase", color: "#6B7280", marginBottom: "4px" }}>Avg Trips/Hour</p>
+              <p style={{ fontSize: "20px", fontWeight: "900", color: "#3B82F6" }}>{avgTripsPerHour.toLocaleString()}</p>
+            </div>
+            <div style={{ background: darkMode ? "#1F2937" : "white", padding: "16px", borderRadius: "12px", textAlign: "center", border: darkMode ? "1px solid #374151" : "1px solid #E5E7EB" }}>
+              <p style={{ fontSize: "10px", fontWeight: "800", textTransform: "uppercase", color: "#6B7280", marginBottom: "4px" }}>Daily Average</p>
+              <p style={{ fontSize: "20px", fontWeight: "900", color: "#10B981" }}>{Math.round(totalDailyAvg).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Top Zones List */}
+        <div style={{ 
+          background: "white", 
+          padding: "24px", 
+          borderRadius: "16px", 
+          border: `1px solid #E5E7EB`,
+          boxShadow: "0 4px 6px rgba(0,0,0,0.05)"
+        }}>
+          <h3 style={{ fontSize: "16px", fontWeight: "900", marginBottom: "16px", textTransform: "uppercase", color: secondaryColor }}>
+            Top 5 Busiest Zones
+          </h3>
+          <div style={{ display: "grid", gap: "12px" }}>
+            {topZones.map((z, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px", borderBottom: i < 4 ? "1px solid #F3F4F6" : "none" }}>
+                <div>
+                  <span style={{ fontWeight: "800", color: secondaryColor }}>{z.zone}</span>
+                  <p style={{ fontSize: "11px", color: "#6B7280", fontWeight: "700" }}>{z.borough}</p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ background: "#F3F4F6", padding: "6px 12px", borderRadius: "8px", fontWeight: "800", color: "#EF4444", marginBottom: "4px" }}>
+                    {z.trip_count.toLocaleString()} trips
+                  </div>
+                  <div style={{ fontSize: "10px", color: "#6B7280", fontWeight: "700" }}>
+                    {z.trips_per_hour}/hr · {z.daily_avg}/day
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }

@@ -18,6 +18,10 @@
   --card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
 }
 
+html {
+  font-size: 80%; /* Scales down all rem-based units to fix overflow and large fonts */
+}
+
 body {
   background-color: var(--bg-main);
   color: var(--text-main);
