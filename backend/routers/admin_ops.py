@@ -83,7 +83,27 @@ def list_feedback(db: Session = Depends(get_db), x_api_key: str = Header(None)):
 
 
 
-@router.post("/rollback-model", dependencies=[Depends(verify_admin_key)])
+@router.post("/promote-user")
+def promote_user(payload: dict, db: Session = Depends(get_db), x_api_key: str = Header(None)):
+    verify_admin_key(x_api_key)
+    username = payload.get("username")
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.role = "admin"
+    db.commit()
+    return {"status": "success", "message": f"{username} is now an admin"}
+
+@router.post("/demote-user")
+def demote_user(payload: dict, db: Session = Depends(get_db), x_api_key: str = Header(None)):
+    verify_admin_key(x_api_key)
+    username = payload.get("username")
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.role = "user"
+    db.commit()
+    return {"status": "success", "message": f"{username} demoted to user"}
 def rollback_model():
     registry_path = MODEL_DIR / "version_registry.json"
     if not registry_path.exists():

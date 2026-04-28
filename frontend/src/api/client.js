@@ -20,3 +20,12 @@ export const signup          = (data) => api.post('/auth/signup', data)
 // Extended Feedback
 export const submitTripFeedbackExtended = (data) => api.post('/feedback/submit-trip-extended', data)
 export const fetchLiveTraffic = (params) => axios.get('/traffic/live', { params })
+
+// Admin
+const ADMIN_KEY = 'supersecretadmin'
+const adminHeaders = { headers: { 'x-api-key': ADMIN_KEY } }
+export const adminGetUsers    = () => api.get('/admin/users', adminHeaders)
+export const adminGetStats    = () => api.get('/admin/system-stats', adminHeaders)
+export const adminPromoteUser = (username) => api.post('/admin/promote-user', { username }, adminHeaders)
+export const adminDemoteUser  = (username) => api.post('/admin/demote-user', { username }, adminHeaders)
+export const adminGetFeedback = () => api.get('/admin/feedback-list', adminHeaders)

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { fetchLiveTraffic } from '../api/client';
+import { fetchLiveTraffic, getZoneList, estimatePrice } from '../api/client';
 import { useTheme } from '../context/ThemeContext';
+import NYC_ZONE_COORDS from '../data/zoneCoords';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -50,128 +51,6 @@ function FitBounds({ bounds }) {
   return null;
 }
 
-const NYC_ZONE_COORDS = {
-    "Alphabet City": [40.726, -73.978],
-    "Battery Park": [40.703, -74.017],
-    "Battery Park City": [40.713, -74.017],
-    "Bedford Park": [40.869, -73.897],
-    "Bensonhurst": [40.602, -73.972],
-    "Briarwood/Jamaica": [40.708, -73.809],
-    "Bronx Park": [40.856, -73.878],
-    "Brooklyn Heights": [40.696, -73.994],
-    "Brooklyn Navy Yard": [40.700, -73.974],
-    "Bushwick North": [40.694, -73.921],
-    "Bushwick South": [40.698, -73.921],
-    "Canarsie": [40.633, -73.898],
-    "Central Park": [40.785, -73.968],
-    "Chelsea": [40.747, -74.003],
-    "Chinatown": [40.716, -73.997],
-    "Coney Island": [40.576, -73.968],
-    "Crown Heights North": [40.671, -73.950],
-    "Crown Heights South": [40.661, -73.950],
-    "DUMBO/Vinegar Hill": [40.703, -73.988],
-    "East Chelsea": [40.745, -73.997],
-    "East Flatbush": [40.647, -73.957],
-    "East Harlem": [40.797, -73.943],
-    "East New York": [40.662, -73.903],
-    "East Village": [40.726, -73.983],
-    "Fieldston": [40.895, -73.906],
-    "Financial District North": [40.709, -74.011],
-    "Financial District South": [40.707, -74.013],
-    "Flatbush": [40.646, -73.955],
-    "Flushing": [40.758, -73.833],
-    "Fordham": [40.867, -73.888],
-    "Fort Hamilton": [40.641, -73.996],
-    "Freshkills": [40.580, -74.147],
-    "Garment District": [40.754, -73.997],
-    "Glen Oaks": [40.747, -73.710],
-    "Gramercy": [40.736, -73.981],
-    "Greenwich Village North": [40.733, -73.997],
-    "Greenwich Village South": [40.730, -73.997],
-    "Harlem": [40.810, -73.945],
-    "Highbridge": [40.838, -73.921],
-    "Hunts Point": [40.817, -73.881],
-    "Jackson Heights": [40.756, -73.883],
-    "Jamaica": [40.700, -73.808],
-    "Jamaica Estates": [40.721, -73.791],
-    "Kips Bay": [40.743, -73.979],
-    "LaGuardia Airport": [40.776, -73.874],
-    "Lower East Side": [40.718, -73.988],
-    "Manhattan Valley": [40.799, -73.963],
-    "Mechanicsville": [40.635, -74.076],
-    "Midtown Central": [40.754, -73.984],
-    "Midtown East": [40.755, -73.967],
-    "Midtown North": [40.765, -73.984],
-    "Midtown South": [40.748, -73.987],
-    "Midwood": [40.605, -73.965],
-    "Morningside Heights": [40.809, -73.961],
-    "Morris Heights": [40.862, -73.913],
-    "Morrison Heights": [40.819, -73.904],
-    "Mount Hope": [40.857, -73.896],
-    "Murray Hill": [40.748, -73.978],
-    "Newark Airport": [40.689, -74.174],
-    "Oakland Gardens": [40.738, -73.757],
-    "Park Slope": [40.671, -73.977],
-    "Parkchester": [40.833, -73.857],
-    "Pelham": [40.849, -73.840],
-    "Pelham Bay": [40.858, -73.826],
-    "Pomonok": [40.729, -73.730],
-    "Port Richmond": [40.631, -74.094],
-    "Prospect Heights": [40.677, -73.971],
-    "Prospect Park": [40.660, -73.969],
-    "Queens": [40.728, -73.794],
-    "Queens Village": [40.724, -73.765],
-    "Rego Park": [40.722, -73.866],
-    "Richmond Hill": [40.698, -73.849],
-    "Ridgewood": [40.711, -73.897],
-    "Riverdale": [40.890, -73.912],
-    "Rockaway": [40.580, -73.850],
-    "Roosevelt Island": [40.761, -73.945],
-    "Sheepshead Bay": [40.594, -73.944],
-    "SoHo": [40.723, -73.997],
-    "South Bronx": [40.808, -73.917],
-    "South Brooklyn": [40.655, -73.991],
-    "South Sunset Park": [40.651, -73.986],
-    "Spuyten Duyvil": [40.883, -73.912],
-    "St. George": [40.643, -74.073],
-    "Stapleton": [40.630, -74.082],
-    "Sunnyside": [40.745, -73.904],
-    "Times Square": [40.758, -73.985],
-    "TriBeCa/Civic Center": [40.716, -74.006],
-    "Tunnel": [40.728, -73.937],
-    "Upper East Side": [40.773, -73.959],
-    "Upper West Side": [40.787, -73.975],
-    "Van Cortlandt Park": [40.893, -73.899],
-    "Washington Heights": [40.842, -73.940],
-    "West Chelsea": [40.750, -74.005],
-    "West Village": [40.734, -74.006],
-    "Williamsburg North": [40.721, -73.958],
-    "Williamsburg South": [40.708, -73.957],
-    "Woodhaven": [40.691, -73.856],
-    "Woodlawn": [40.896, -73.876],
-    "Woodside": [40.746, -73.906],
-    "Yorkville": [40.779, -73.953],
-    "Unknown": [40.750, -73.900],
-    "JFK Airport": [40.641, -73.778],
-    "Upper East Side North": [40.776, -73.955],
-    "Upper East Side South": [40.770, -73.961],
-    "Upper West Side North": [40.793, -73.972],
-    "Upper West Side South": [40.780, -73.979],
-    "Lincoln Square East": [40.771, -73.983],
-    "Lincoln Square West": [40.774, -73.989],
-    "Clinton East": [40.763, -73.991],
-    "Clinton West": [40.765, -73.996],
-    "East Harlem North": [40.803, -73.935],
-    "East Harlem South": [40.791, -73.944],
-    "Murray Hill-Queens": [40.764, -73.812],
-    "Morningside Heights": [40.809, -73.961],
-    "Astoria": [40.764, -73.923],
-    "Long Island City/Hunters Point": [40.743, -73.950],
-    "Long Island City/Queens Plaza": [40.750, -73.940],
-    "Sunnyside": [40.743, -73.921],
-    "Woodside": [40.745, -73.905],
-};
-
 function calculateBearing(start, end) {
   if (!start || !end) return 0;
   const lat1 = (start[0] * Math.PI) / 180;
@@ -196,9 +75,45 @@ export default function TrafficMap() {
   const [taxiPosition, setTaxiPosition] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [rideCompleted, setRideCompleted] = useState(false);
+  const [mapStyle, setMapStyle] = useState('default');
+  const [fareEstimate, setFareEstimate] = useState(null);
 
   const [pickupCoords, setPickupCoords] = useState(null);
   const [dropoffCoords, setDropoffCoords] = useState(null);
+
+  const [zones, setZones] = useState([]);
+  const [pickupSuggestions, setPickupSuggestions] = useState([]);
+  const [dropoffSuggestions, setDropoffSuggestions] = useState([]);
+  const [showPickupList, setShowPickupList] = useState(false);
+  const [showDropoffList, setShowDropoffList] = useState(false);
+  const pickupRef = useRef(null);
+  const dropoffRef = useRef(null);
+
+  useEffect(() => {
+    getZoneList().then(r => {
+      const list = Array.isArray(r.data) ? r.data : [];
+      setZones(list.map(z => z.pickup_zone || z).filter(Boolean).sort());
+    }).catch(() => {});
+  }, []);
+
+  // Smart zone filter: prioritize starts-with, then includes
+  const filterZones = (query, limit = 10) => {
+    if (!query) return zones.slice(0, limit);
+    const q = query.toLowerCase();
+    const startsWith = zones.filter(z => z.toLowerCase().startsWith(q));
+    const includes = zones.filter(z => !z.toLowerCase().startsWith(q) && z.toLowerCase().includes(q));
+    return [...startsWith, ...includes].slice(0, limit);
+  };
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (pickupRef.current && !pickupRef.current.contains(e.target)) setShowPickupList(false);
+      if (dropoffRef.current && !dropoffRef.current.contains(e.target)) setShowDropoffList(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Check for pending route from Corridor Dashboard
   useEffect(() => {
@@ -294,6 +209,21 @@ export default function TrafficMap() {
       
       const coords = data.geometry.map(([lng, lat]) => [lat, lng]);
       setRouteGeometry(coords);
+
+      // Fetch fare estimate for this route
+      const now2 = new Date();
+      const jsDay = now2.getDay();
+      estimatePrice({
+        trip_distance: distanceKm * 0.621371, // km to miles
+        pickup_hour: now2.getHours(),
+        pickup_weekday: jsDay === 0 ? 6 : jsDay - 1,
+        pickup_month: now2.getMonth() + 1,
+        pickup_is_manhattan: 1,
+        dropoff_is_manhattan: 1,
+        pickup_is_airport: 0,
+        dropoff_is_airport: 0,
+        corridor_volatility: 0.15
+      }).then(r => setFareEstimate(r.data)).catch(() => {});
       
       // Automatically start ride if this was a jump from the dashboard
       if (localStorage.getItem("isAutoTracking") === "true") {
@@ -407,10 +337,24 @@ export default function TrafficMap() {
                   zoom={12}
                   style={{ height: "500px", width: "100%", zIndex: 0 }}
                 >
+                  {/* Map Style Toggle */}
+                  <div style={{ position: "absolute", top: "12px", left: "12px", zIndex: 1000, display: "flex", gap: "4px", background: "rgba(255,255,255,0.92)", padding: "4px", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
+                    {[{id:'default',label:'🗺️',title:'Default'},{id:'satellite',label:'🛰️',title:'Satellite'},{id:'street',label:'🏙️',title:'Street'}].map(s => (
+                      <button key={s.id} onClick={() => setMapStyle(s.id)} title={s.title} style={{
+                        padding: "5px 9px", borderRadius: "7px", fontSize: "14px", border: "none", cursor: "pointer",
+                        background: mapStyle === s.id ? "#003580" : "transparent", transition: "all 0.2s"
+                      }}>{s.label}</button>
+                    ))}
+                  </div>
                   <TileLayer
-                    url={darkMode 
-                      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                    url={
+                      mapStyle === 'satellite'
+                        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                        : mapStyle === 'street'
+                        ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                        : darkMode
+                        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                     }
                     attribution='&copy; OpenStreetMap contributors &copy; CARTO'
                   />
@@ -473,7 +417,7 @@ export default function TrafficMap() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-              <div>
+              <div ref={pickupRef} style={{ position: "relative" }}>
                 <label style={{ fontSize: "12px", fontWeight: "700", color: darkMode ? "#9CA3AF" : "#6B7280", marginBottom: "8px", display: "block" }}>
                   Where are you?
                 </label>
@@ -481,15 +425,40 @@ export default function TrafficMap() {
                   type="text" 
                   placeholder="Where are you starting from?"
                   value={pickupLocation} 
-                  onChange={e => setPickupLocation(e.target.value)} 
+                  onChange={e => {
+                    setPickupLocation(e.target.value);
+                    setPickupSuggestions(filterZones(e.target.value));
+                    setShowPickupList(true);
+                  }}
+                  onFocus={() => {
+                    setPickupSuggestions(filterZones(pickupLocation));
+                    setShowPickupList(true);
+                  }}
                   style={{
                     width: "100%", padding: "12px 16px", borderRadius: "12px",
                     background: darkMode ? "#374151" : "#F3F4F6", border: "none",
                     color: darkMode ? "#F9FAFB" : "#111827", fontSize: "14px", fontWeight: "600"
                   }}
                 />
+                {showPickupList && pickupSuggestions.length > 0 && (
+                  <div style={{
+                    position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999,
+                    background: darkMode ? "#1F2937" : "white", borderRadius: "12px",
+                    boxShadow: "0 10px 25px rgba(0,0,0,0.15)", border: darkMode ? "1px solid #374151" : "1px solid #E5E7EB",
+                    maxHeight: "220px", overflowY: "auto", marginTop: "4px"
+                  }}>
+                    {pickupSuggestions.map(z => (
+                      <div key={z} onMouseDown={() => { setPickupLocation(z); setShowPickupList(false); }}
+                        style={{ padding: "10px 16px", cursor: "pointer", fontSize: "14px", fontWeight: "600",
+                          color: darkMode ? "#F9FAFB" : "#111827", borderBottom: darkMode ? "1px solid #374151" : "1px solid #F3F4F6" }}
+                        onMouseEnter={e => e.currentTarget.style.background = darkMode ? "#374151" : "#F3F4F6"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >📍 {z}</div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div>
+              <div ref={dropoffRef} style={{ position: "relative" }}>
                 <label style={{ fontSize: "12px", fontWeight: "700", color: darkMode ? "#9CA3AF" : "#6B7280", marginBottom: "8px", display: "block" }}>
                   Where to?
                 </label>
@@ -497,13 +466,38 @@ export default function TrafficMap() {
                   type="text" 
                   placeholder="Where are you going?"
                   value={dropoffLocation} 
-                  onChange={e => setDropoffLocation(e.target.value)} 
+                  onChange={e => {
+                    setDropoffLocation(e.target.value);
+                    setDropoffSuggestions(filterZones(e.target.value));
+                    setShowDropoffList(true);
+                  }}
+                  onFocus={() => {
+                    setDropoffSuggestions(filterZones(dropoffLocation));
+                    setShowDropoffList(true);
+                  }}
                   style={{
                     width: "100%", padding: "12px 16px", borderRadius: "12px",
                     background: darkMode ? "#374151" : "#F3F4F6", border: "none",
                     color: darkMode ? "#F9FAFB" : "#111827", fontSize: "14px", fontWeight: "600"
                   }}
                 />
+                {showDropoffList && dropoffSuggestions.length > 0 && (
+                  <div style={{
+                    position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999,
+                    background: darkMode ? "#1F2937" : "white", borderRadius: "12px",
+                    boxShadow: "0 10px 25px rgba(0,0,0,0.15)", border: darkMode ? "1px solid #374151" : "1px solid #E5E7EB",
+                    maxHeight: "220px", overflowY: "auto", marginTop: "4px"
+                  }}>
+                    {dropoffSuggestions.map(z => (
+                      <div key={z} onMouseDown={() => { setDropoffLocation(z); setShowDropoffList(false); }}
+                        style={{ padding: "10px 16px", cursor: "pointer", fontSize: "14px", fontWeight: "600",
+                          color: darkMode ? "#F9FAFB" : "#111827", borderBottom: darkMode ? "1px solid #374151" : "1px solid #F3F4F6" }}
+                        onMouseEnter={e => e.currentTarget.style.background = darkMode ? "#374151" : "#F3F4F6"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >🏁 {z}</div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             
@@ -534,6 +528,35 @@ export default function TrafficMap() {
               <p style={{ color: "#10B981", fontWeight: "700", textAlign: "center", margin: 0 }}>
                 ✅ Your ride has started! Taxi moves every 10 seconds.
               </p>
+            )}
+
+            {/* Fare Estimate Card */}
+            {fareEstimate && (
+              <div style={{
+                background: 'linear-gradient(135deg, #003580, #1e40af)',
+                borderRadius: '16px', padding: '20px 24px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                flexWrap: 'wrap', gap: '16px'
+              }}>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: '800', color: '#93C5FD', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                    💰 Estimated Fare
+                  </div>
+                  <div style={{ fontSize: '32px', fontWeight: '900', color: '#FFB800' }}>
+                    ${fareEstimate.expected_price}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#93C5FD', fontWeight: '600', marginTop: '2px' }}>
+                    Range: ${fareEstimate.price_band_min} — ${fareEstimate.price_band_max}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                  {fareEstimate.price_drivers?.slice(0,2).map((d, i) => (
+                    <span key={i} style={{ fontSize: '11px', fontWeight: '700', color: '#BFDBFE', background: '#ffffff15', padding: '4px 10px', borderRadius: '20px' }}>
+                      ⚡ {d}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
             
             {rideCompleted && (

@@ -89,7 +89,7 @@ export default function PriceSimulator() {
             fontWeight: "700", fontSize: "14px", display: "flex",
             alignItems: "center", gap: "8px", border: "1px solid #BFDBFE"
           }}>
-            💡 No saved route. You can type manually or visit the <a href="/traffic-map" style={{ color: "#2563EB", textDecoration: "underline", fontWeight: "900" }}>Live Route Tracker</a> first.
+            💡 No saved route. Type manually or visit the <a href="/traffic-map" style={{ color: "#2563EB", textDecoration: "underline", fontWeight: "900" }}>Live Route Tracker</a> first.
           </div>
         )}
 
@@ -102,14 +102,12 @@ export default function PriceSimulator() {
               <input 
                 placeholder="Pickup Location"
                 value={pickupLocation}
-                readOnly={autoFilled}
-                onChange={(e) => !autoFilled && setPickupLocation(e.target.value)}
+                onChange={(e) => setPickupLocation(e.target.value)}
                 style={{
                   width: "100%", padding: "14px 16px", borderRadius: "10px",
                   background: darkMode ? "#374151" : "#F3F4F6", border: "1px solid #E5E7EB",
-                  color: autoFilled ? "#6B7280" : (darkMode ? "#F9FAFB" : "#111827"),
-                  fontSize: "14px", fontWeight: "600",
-                  cursor: autoFilled ? "not-allowed" : "text"
+                  color: darkMode ? "#F9FAFB" : "#111827",
+                  fontSize: "14px", fontWeight: "600"
                 }}
               />
             </div>
@@ -120,14 +118,12 @@ export default function PriceSimulator() {
               <input 
                 placeholder="Dropoff Location"
                 value={dropoffLocation}
-                readOnly={autoFilled}
-                onChange={(e) => !autoFilled && setDropoffLocation(e.target.value)}
+                onChange={(e) => setDropoffLocation(e.target.value)}
                 style={{
                   width: "100%", padding: "14px 16px", borderRadius: "10px",
                   background: darkMode ? "#374151" : "#F3F4F6", border: "1px solid #E5E7EB",
-                  color: autoFilled ? "#6B7280" : (darkMode ? "#F9FAFB" : "#111827"),
-                  fontSize: "14px", fontWeight: "600",
-                  cursor: autoFilled ? "not-allowed" : "text"
+                  color: darkMode ? "#F9FAFB" : "#111827",
+                  fontSize: "14px", fontWeight: "600"
                 }}
               />
             </div>
@@ -142,14 +138,12 @@ export default function PriceSimulator() {
                 type="number"
                 placeholder="Trip distance"
                 value={distance}
-                readOnly={autoFilled}
-                onChange={(e) => !autoFilled && setDistance(e.target.value)}
+                onChange={(e) => setDistance(e.target.value)}
                 style={{
                   width: "100%", padding: "14px 16px", borderRadius: "10px",
                   background: darkMode ? "#374151" : "#F3F4F6", border: "1px solid #E5E7EB",
-                  color: autoFilled ? "#6B7280" : (darkMode ? "#F9FAFB" : "#111827"),
-                  fontSize: "14px", fontWeight: "600",
-                  cursor: autoFilled ? "not-allowed" : "text"
+                  color: darkMode ? "#F9FAFB" : "#111827",
+                  fontSize: "14px", fontWeight: "600"
                 }}
               />
             </div>
@@ -161,14 +155,12 @@ export default function PriceSimulator() {
                 type="number"
                 placeholder="Trip duration"
                 value={duration}
-                readOnly={autoFilled}
-                onChange={(e) => !autoFilled && setDuration(e.target.value)}
+                onChange={(e) => setDuration(e.target.value)}
                 style={{
                   width: "100%", padding: "14px 16px", borderRadius: "10px",
                   background: darkMode ? "#374151" : "#F3F4F6", border: "1px solid #E5E7EB",
-                  color: autoFilled ? "#6B7280" : (darkMode ? "#F9FAFB" : "#111827"),
-                  fontSize: "14px", fontWeight: "600",
-                  cursor: autoFilled ? "not-allowed" : "text"
+                  color: darkMode ? "#F9FAFB" : "#111827",
+                  fontSize: "14px", fontWeight: "600"
                 }}
               />
             </div>

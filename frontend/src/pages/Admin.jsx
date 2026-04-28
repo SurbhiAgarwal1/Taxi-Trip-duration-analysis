@@ -1,149 +1,316 @@
 import { useEffect, useState } from 'react'
-import { getModelMetrics } from '../api/client'
+import { getModelMetrics, adminGetUsers, adminGetStats, adminPromoteUser, adminDemoteUser, adminGetFeedback } from '../api/client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
+import { useAuth } from '../context/AuthContext'
+
+const PRIMARY = '#FFB800'
+const DARK = '#003580'
 
 export default function Admin() {
+  const { user } = useAuth()
+  const [tab, setTab] = useState('users')
+  const [users, setUsers] = useState([])
+  const [stats, setStats] = useState(null)
   const [metrics, setMetrics] = useState(null)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [regData, setRegData] = useState({ user: '', pass: '' })
+  const [feedback, setFeedback] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 3000) }
 
   useEffect(() => {
-    if (isAdmin) {
-      getModelMetrics().then(r => setMetrics(r.data)).catch(() => {})
-    }
-  }, [isAdmin])
-
-  const handleRegister = (e) => {
-    e.preventDefault()
-    if (regData.user && regData.pass) {
-      setIsAdmin(true)
-      localStorage.setItem('taxi_admin', 'true')
-    }
-  }
-
-  useEffect(() => {
-    if (localStorage.getItem('taxi_admin') === 'true') {
-      setIsAdmin(true)
-    }
+    loadAll()
   }, [])
 
-  if (!isAdmin) {
-    return (
-      <div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow-lg border border-gray-200">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800">Admin Registration</h2>
-          <p className="text-gray-500 mt-2">Access technical model performance metrics</p>
-        </div>
-        <form onSubmit={handleRegister} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Username</label>
-            <input 
-              type="text" required
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" 
-              value={regData.user} onChange={e => setRegData({...regData, user: e.target.value})}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
-            <input 
-              type="password" required
-              className="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" 
-              value={regData.pass} onChange={e => setRegData({...regData, pass: e.target.value})}
-            />
-          </div>
-          <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-md font-medium hover:bg-blue-700 transition-colors">
-            Register as Admin
-          </button>
-        </form>
-      </div>
-    )
+  const loadAll = async () => {
+    setLoading(true)
+    try {
+      const [u, s, m, f] = await Promise.all([
+        adminGetUsers(), adminGetStats(), getModelMetrics(), adminGetFeedback()
+      ])
+      setUsers(u.data || [])
+      setStats(s.data || null)
+      setMetrics(m.data || null)
+      setFeedback(Array.isArray(f.data) ? f.data : [])
+    } catch (e) {
+      flash('Failed to load admin data. Check backend.')
+    }
+    setLoading(false)
+  }
+
+  const promote = async (username) => {
+    try {
+      await adminPromoteUser(username)
+      flash(`✅ ${username} promoted to admin`)
+      loadAll()
+    } catch { flash('Failed to promote user') }
+  }
+
+  const demote = async (username) => {
+    try {
+      await adminDemoteUser(username)
+      flash(`✅ ${username} demoted to user`)
+      loadAll()
+    } catch { flash('Failed to demote user') }
   }
 
   const modelData = metrics && !metrics.error
-    ? Object.entries(metrics).map(([name, v]) => ({ 
-        name: name.replace('Regression','LR').replace('Forest','RF').replace('Boosting','GBM'), 
-        ...v 
+    ? Object.entries(metrics).map(([name, v]) => ({
+        name: name.replace('Regression','LR').replace('Forest','RF').replace('Boosting','GBM'), ...v
       }))
     : []
 
+  const tabs = [
+    { id: 'users', label: '👥 Users' },
+    { id: 'feedback', label: '📋 Feedback' },
+    { id: 'models', label: '🤖 Models' },
+    { id: 'system', label: '⚙️ System' },
+  ]
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center border-b border-gray-300 pb-4">
+    <div style={{ maxWidth: '1200px', margin: '0 auto', color: DARK }}>
+      {/* Header */}
+      <div style={{ marginBottom: '32px', borderBottom: `2px solid #E5E7EB`, paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 className="text-2xl font-semibold text-gray-800">Admin Panel</h1>
-          <p className="text-gray-500 text-sm mt-1">System Health & AI Model Performance Monitoring</p>
+          <h1 style={{ fontSize: '28px', fontWeight: '900', margin: 0 }}>Admin Panel</h1>
+          <p style={{ color: '#6B7280', margin: '4px 0 0', fontWeight: '600', fontSize: '14px' }}>
+            Logged in as <span style={{ color: DARK, fontWeight: '800' }}>{user?.username}</span>
+          </p>
         </div>
-        <button 
-          onClick={() => { setIsAdmin(false); localStorage.removeItem('taxi_admin'); }}
-          className="text-red-600 font-medium text-sm hover:underline"
-        >
-          Logout
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="card">
-          <h2 className="text-lg font-medium text-gray-800 mb-6">Model Error Comparison (MAE/RMSE)</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={modelData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-              <XAxis dataKey="name" stroke="#6b7280" />
-              <YAxis stroke="#6b7280" />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="mae"  name="MAE (Min)"  fill="#10b981" radius={[4,4,0,0]} />
-              <Bar dataKey="rmse" name="RMSE (Min)" fill="#ef4444" radius={[4,4,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="card">
-          <h2 className="text-lg font-medium text-gray-800 mb-6">R² Score (Accuracy Metric)</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={modelData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-              <XAxis dataKey="name" stroke="#6b7280" />
-              <YAxis domain={[0, 1]} stroke="#6b7280" />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="r2" name="R² Value" fill="#3b82f6" radius={[4,4,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          {stats && (
+            <>
+              <Stat label="Total Users" value={stats.total_users ?? '—'} color="#3B82F6" />
+              <Stat label="Feedback Records" value={stats.total_feedback_records ?? '—'} color="#10B981" />
+              <Stat label="Avg Error" value={stats.average_error_minutes ? `${stats.average_error_minutes} min` : '—'} color="#F59E0B" />
+            </>
+          )}
         </div>
       </div>
 
-      <div className="card">
-        <h2 className="text-lg font-medium text-gray-800 mb-4">Model Details</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+      {msg && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #6EE7B7', color: '#065F46', padding: '12px 20px', borderRadius: '12px', fontWeight: '700', marginBottom: '20px', fontSize: '14px' }}>
+          {msg}
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', background: '#F3F4F6', padding: '6px', borderRadius: '14px', width: 'fit-content' }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+            fontWeight: '800', fontSize: '13px',
+            background: tab === t.id ? DARK : 'transparent',
+            color: tab === t.id ? 'white' : '#6B7280',
+            transition: 'all 0.2s'
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {loading && <div style={{ textAlign: 'center', padding: '60px', color: '#9CA3AF', fontWeight: '700' }}>Loading...</div>}
+
+      {/* Users Tab */}
+      {!loading && tab === 'users' && (
+        <div style={{ background: 'white', borderRadius: '20px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, fontWeight: '800', fontSize: '16px' }}>Registered Users ({users.length})</h2>
+            <span style={{ fontSize: '12px', color: '#9CA3AF', fontWeight: '700' }}>Click to promote/demote roles</span>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr className="border-b border-gray-200 text-gray-500 uppercase font-medium tracking-wider">
-                <th className="pb-3">Model Name</th>
-                <th className="pb-3">R² Accuracy</th>
-                <th className="pb-3">Mean Abs Error</th>
-                <th className="pb-3">Root Mean Sq Error</th>
-                <th className="pb-3">Status</th>
+              <tr style={{ background: '#F9FAFB' }}>
+                {['Username', 'Email', 'Role', 'Joined', 'Action'].map(h => (
+                  <th key={h} style={{ padding: '12px 20px', textAlign: 'left', fontSize: '11px', fontWeight: '900', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '1px' }}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {modelData.map(m => (
-                <tr key={m.name} className="hover:bg-gray-50">
-                  <td className="py-4 font-medium text-gray-800">{m.name}</td>
-                  <td className="py-4 text-blue-600 font-bold">{(m.r2 * 100).toFixed(1)}%</td>
-                  <td className="py-4 text-green-600">{m.mae} min</td>
-                  <td className="py-4 text-red-600">{m.rmse} min</td>
-                  <td className="py-4">
-                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">ACTIVE</span>
+            <tbody>
+              {users.map((u, i) => (
+                <tr key={i} style={{ borderTop: '1px solid #F3F4F6' }}>
+                  <td style={{ padding: '14px 20px', fontWeight: '800', fontSize: '14px' }}>{u.username}</td>
+                  <td style={{ padding: '14px 20px', color: '#6B7280', fontSize: '13px' }}>{u.email}</td>
+                  <td style={{ padding: '14px 20px' }}>
+                    <span style={{
+                      padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '900',
+                      background: u.role === 'admin' ? '#FEF3C7' : '#EFF6FF',
+                      color: u.role === 'admin' ? '#92400E' : '#1E40AF'
+                    }}>
+                      {u.role === 'admin' ? '👑 ADMIN' : '👤 USER'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px 20px', color: '#9CA3AF', fontSize: '12px' }}>
+                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
+                  </td>
+                  <td style={{ padding: '14px 20px' }}>
+                    {u.username !== user?.username && (
+                      u.role === 'admin'
+                        ? <button onClick={() => demote(u.username)} style={btnStyle('#FEF2F2', '#DC2626')}>Demote</button>
+                        : <button onClick={() => promote(u.username)} style={btnStyle('#ECFDF5', '#059669')}>Make Admin</button>
+                    )}
+                    {u.username === user?.username && <span style={{ fontSize: '12px', color: '#D1D5DB', fontWeight: '700' }}>You</span>}
                   </td>
                 </tr>
               ))}
+              {users.length === 0 && (
+                <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#9CA3AF', fontWeight: '700' }}>No users found</td></tr>
+              )}
             </tbody>
           </table>
         </div>
-      </div>
+      )}
+
+      {/* Feedback Tab */}
+      {!loading && tab === 'feedback' && (
+        <div style={{ background: 'white', borderRadius: '20px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB' }}>
+            <h2 style={{ margin: 0, fontWeight: '800', fontSize: '16px' }}>Trip Feedback ({feedback.length})</h2>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#F9FAFB' }}>
+                  {['User', 'Pickup', 'Dropoff', 'Price ($)', 'Duration (min)', 'Submitted'].map(h => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: '900', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {feedback.slice(0, 50).map((f, i) => (
+                  <tr key={i} style={{ borderTop: '1px solid #F3F4F6' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: '700', fontSize: '13px' }}>{f.user_name || '—'}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '12px', color: '#374151' }}>{f.pickup_location || '—'}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '12px', color: '#374151' }}>{f.drop_location || '—'}</td>
+                    <td style={{ padding: '12px 16px', fontWeight: '800', color: '#10B981' }}>${f.actual_price?.toFixed(2) ?? '—'}</td>
+                    <td style={{ padding: '12px 16px', color: '#6B7280', fontSize: '13px' }}>{f.trip_duration?.toFixed(1) ?? '—'}</td>
+                    <td style={{ padding: '12px 16px', color: '#9CA3AF', fontSize: '12px' }}>
+                      {f.created_at ? new Date(f.created_at).toLocaleString() : '—'}
+                    </td>
+                  </tr>
+                ))}
+                {feedback.length === 0 && (
+                  <tr><td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#9CA3AF', fontWeight: '700' }}>No feedback submitted yet</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Models Tab */}
+      {!loading && tab === 'models' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div style={{ background: 'white', borderRadius: '20px', border: '1px solid #E5E7EB', padding: '24px' }}>
+            <h2 style={{ fontWeight: '800', fontSize: '16px', marginBottom: '20px' }}>MAE / RMSE</h2>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={modelData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
+                <XAxis dataKey="name" stroke="#9CA3AF" />
+                <YAxis stroke="#9CA3AF" />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="mae" name="MAE (min)" fill="#10B981" radius={[4,4,0,0]} />
+                <Bar dataKey="rmse" name="RMSE (min)" fill="#EF4444" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div style={{ background: 'white', borderRadius: '20px', border: '1px solid #E5E7EB', padding: '24px' }}>
+            <h2 style={{ fontWeight: '800', fontSize: '16px', marginBottom: '20px' }}>R² Score</h2>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={modelData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
+                <XAxis dataKey="name" stroke="#9CA3AF" />
+                <YAxis domain={[0,1]} stroke="#9CA3AF" />
+                <Tooltip />
+                <Bar dataKey="r2" name="R² Value" fill="#3B82F6" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div style={{ gridColumn: '1/-1', background: 'white', borderRadius: '20px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#F9FAFB' }}>
+                  {['Model', 'R² Accuracy', 'MAE', 'RMSE', 'Status'].map(h => (
+                    <th key={h} style={{ padding: '12px 20px', textAlign: 'left', fontSize: '11px', fontWeight: '900', color: '#9CA3AF', textTransform: 'uppercase' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {modelData.map(m => (
+                  <tr key={m.name} style={{ borderTop: '1px solid #F3F4F6' }}>
+                    <td style={{ padding: '14px 20px', fontWeight: '800' }}>{m.name}</td>
+                    <td style={{ padding: '14px 20px', color: '#3B82F6', fontWeight: '800' }}>{(m.r2 * 100).toFixed(1)}%</td>
+                    <td style={{ padding: '14px 20px', color: '#10B981', fontWeight: '700' }}>{m.mae} min</td>
+                    <td style={{ padding: '14px 20px', color: '#EF4444', fontWeight: '700' }}>{m.rmse} min</td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <span style={{ padding: '4px 10px', background: '#ECFDF5', color: '#059669', borderRadius: '20px', fontSize: '11px', fontWeight: '900' }}>ACTIVE</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* System Tab */}
+      {!loading && tab === 'system' && stats && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div style={{ background: 'white', borderRadius: '20px', border: '1px solid #E5E7EB', padding: '28px' }}>
+            <h2 style={{ fontWeight: '800', fontSize: '16px', marginBottom: '20px' }}>System Health</h2>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <Row label="Status" value={<Badge ok={stats.status === 'healthy'} label={stats.status} />} />
+              <Row label="Active Model Version" value={stats.active_model_version || '—'} />
+              <Row label="Total Feedback Records" value={stats.total_feedback_records} />
+              <Row label="Total Users" value={stats.total_users} />
+              <Row label="Avg Prediction Error" value={`${stats.average_error_minutes} min`} />
+            </div>
+          </div>
+          <div style={{ background: 'white', borderRadius: '20px', border: '1px solid #E5E7EB', padding: '28px' }}>
+            <h2 style={{ fontWeight: '800', fontSize: '16px', marginBottom: '20px' }}>Recent Drift Reports</h2>
+            {stats.recent_drifts?.length > 0
+              ? stats.recent_drifts.map((d, i) => (
+                  <div key={i} style={{ padding: '10px 14px', background: '#FEF3C7', borderRadius: '10px', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: '#92400E' }}>
+                    ⚠️ {d}
+                  </div>
+                ))
+              : <p style={{ color: '#9CA3AF', fontWeight: '700' }}>No drift reports</p>
+            }
+          </div>
+        </div>
+      )}
     </div>
   )
+}
+
+function Stat({ label, value, color }) {
+  return (
+    <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '12px 20px', textAlign: 'center', minWidth: '100px' }}>
+      <div style={{ fontSize: '20px', fontWeight: '900', color }}>{value}</div>
+      <div style={{ fontSize: '10px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', marginTop: '2px' }}>{label}</div>
+    </div>
+  )
+}
+
+function Row({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #F3F4F6' }}>
+      <span style={{ fontSize: '13px', fontWeight: '700', color: '#6B7280' }}>{label}</span>
+      <span style={{ fontSize: '14px', fontWeight: '800', color: '#111827' }}>{value}</span>
+    </div>
+  )
+}
+
+function Badge({ ok, label }) {
+  return (
+    <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '900', background: ok ? '#ECFDF5' : '#FEF2F2', color: ok ? '#059669' : '#DC2626' }}>
+      {ok ? '✅' : '❌'} {label?.toUpperCase()}
+    </span>
+  )
+}
+
+function btnStyle(bg, color) {
+  return {
+    padding: '6px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+    background: bg, color, fontWeight: '800', fontSize: '12px'
+  }
 }

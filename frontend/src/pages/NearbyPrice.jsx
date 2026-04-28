@@ -1,170 +1,32 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { getNearbyPrice, getZoneList } from '../api/client'
 import { useTheme } from '../context/ThemeContext'
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap, Marker } from "react-leaflet"
+import { MapContainer, TileLayer, CircleMarker, Tooltip, Polyline, useMap, Marker } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
+import NYC_ZONE_COORDS from '../data/zoneCoords'
 
 // Custom Icon for Pickup Location
 const pickupIcon = L.divIcon({
   className: "",
-  html: `<div style="
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 30px;
-    height: 30px;
-  ">
-    <div style="
-      position: absolute;
-      width: 30px;
-      height: 30px;
-      background: #3B82F644;
-      border-radius: 50%;
-      animation: pulse-ring 1.5s infinite;
-    "></div>
-    <div style="
-      width: 14px;
-      height: 14px;
-      background: #3B82F6;
-      border: 3px solid white;
-      border-radius: 50%;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      z-index: 2;
-    "></div>
+  html: `<div style="display:flex;justify-content:center;align-items:center;width:30px;height:30px;">
+    <div style="position:absolute;width:30px;height:30px;background:#3B82F644;border-radius:50%;animation:pulse-ring 1.5s infinite;"></div>
+    <div style="width:14px;height:14px;background:#3B82F6;border:3px solid white;border-radius:50%;box-shadow:0 4px 8px rgba(0,0,0,0.3);z-index:2;"></div>
   </div>
-  <style>
-    @keyframes pulse-ring {
-      0% { transform: scale(0.5); opacity: 1; }
-      100% { transform: scale(2); opacity: 0; }
-    }
-  </style>`,
-  iconSize: [30, 30],
-  iconAnchor: [15, 15]
+  <style>@keyframes pulse-ring{0%{transform:scale(0.5);opacity:1;}100%{transform:scale(2);opacity:0;}}</style>`,
+  iconSize: [30, 30], iconAnchor: [15, 15]
 });
 
-// Fallback coordinates for NYC Zones
-const NYC_ZONE_COORDS = {
-    "Alphabet City": [40.726, -73.978],
-    "Battery Park": [40.703, -74.017],
-    "Battery Park City": [40.713, -74.017],
-    "Bedford Park": [40.869, -73.897],
-    "Bensonhurst": [40.602, -73.972],
-    "Briarwood/Jamaica": [40.708, -73.809],
-    "Bronx Park": [40.856, -73.878],
-    "Brooklyn Heights": [40.696, -73.994],
-    "Brooklyn Navy Yard": [40.700, -73.974],
-    "Bushwick North": [40.694, -73.921],
-    "Bushwick South": [40.698, -73.921],
-    "Canarsie": [40.633, -73.898],
-    "Central Park": [40.785, -73.968],
-    "Chelsea": [40.747, -74.003],
-    "Chinatown": [40.716, -73.997],
-    "Coney Island": [40.576, -73.968],
-    "Crown Heights North": [40.671, -73.950],
-    "Crown Heights South": [40.661, -73.950],
-    "DUMBO/Vinegar Hill": [40.703, -73.988],
-    "East Chelsea": [40.745, -73.997],
-    "East Flatbush": [40.647, -73.957],
-    "East Harlem": [40.797, -73.943],
-    "East New York": [40.662, -73.903],
-    "East Village": [40.726, -73.983],
-    "Fieldston": [40.895, -73.906],
-    "Financial District North": [40.709, -74.011],
-    "Financial District South": [40.707, -74.013],
-    "Flatbush": [40.646, -73.955],
-    "Flushing": [40.758, -73.833],
-    "Fordham": [40.867, -73.888],
-    "Fort Hamilton": [40.641, -73.996],
-    "Freshkills": [40.580, -74.147],
-    "Garment District": [40.754, -73.997],
-    "Glen Oaks": [40.747, -73.710],
-    "Gramercy": [40.736, -73.981],
-    "Greenwich Village North": [40.733, -73.997],
-    "Greenwich Village South": [40.730, -73.997],
-    "Harlem": [40.810, -73.945],
-    "Highbridge": [40.838, -73.921],
-    "Hunts Point": [40.817, -73.881],
-    "Jackson Heights": [40.756, -73.883],
-    "Jamaica": [40.700, -73.808],
-    "Jamaica Estates": [40.721, -73.791],
-    "Kips Bay": [40.743, -73.979],
-    "LaGuardia Airport": [40.776, -73.874],
-    "Lower East Side": [40.718, -73.988],
-    "Manhattan Valley": [40.799, -73.963],
-    "Mechanicsville": [40.635, -74.076],
-    "Midtown Central": [40.754, -73.984],
-    "Midtown East": [40.755, -73.967],
-    "Midtown North": [40.765, -73.984],
-    "Midtown South": [40.748, -73.987],
-    "Midwood": [40.605, -73.965],
-    "Morningside Heights": [40.809, -73.961],
-    "Morris Heights": [40.862, -73.913],
-    "Morrison Heights": [40.819, -73.904],
-    "Mount Hope": [40.857, -73.896],
-    "Murray Hill": [40.748, -73.978],
-    "Newark Airport": [40.689, -74.174],
-    "Oakland Gardens": [40.738, -73.757],
-    "Park Slope": [40.671, -73.977],
-    "Parkchester": [40.833, -73.857],
-    "Pelham": [40.849, -73.840],
-    "Pelham Bay": [40.858, -73.826],
-    "Pomonok": [40.729, -73.730],
-    "Port Richmond": [40.631, -74.094],
-    "Prospect Heights": [40.677, -73.971],
-    "Prospect Park": [40.660, -73.969],
-    "Queens": [40.728, -73.794],
-    "Queens Village": [40.724, -73.765],
-    "Rego Park": [40.722, -73.866],
-    "Richmond Hill": [40.698, -73.849],
-    "Ridgewood": [40.711, -73.897],
-    "Riverdale": [40.890, -73.912],
-    "Rockaway": [40.580, -73.850],
-    "Roosevelt Island": [40.761, -73.945],
-    "Sheepshead Bay": [40.594, -73.944],
-    "SoHo": [40.723, -73.997],
-    "South Bronx": [40.808, -73.917],
-    "South Brooklyn": [40.655, -73.991],
-    "South Sunset Park": [40.651, -73.986],
-    "Spuyten Duyvil": [40.883, -73.912],
-    "St. George": [40.643, -74.073],
-    "Stapleton": [40.630, -74.082],
-    "Sunnyside": [40.745, -73.904],
-    "Times Square": [40.758, -73.985],
-    "TriBeCa/Civic Center": [40.716, -74.006],
-    "Tunnel": [40.728, -73.937],
-    "Upper East Side": [40.773, -73.959],
-    "Upper West Side": [40.787, -73.975],
-    "Van Cortlandt Park": [40.893, -73.899],
-    "Washington Heights": [40.842, -73.940],
-    "West Chelsea": [40.750, -74.005],
-    "West Village": [40.734, -74.006],
-    "Williamsburg North": [40.721, -73.958],
-    "Williamsburg South": [40.708, -73.957],
-    "Woodhaven": [40.691, -73.856],
-    "Woodlawn": [40.896, -73.876],
-    "Woodside": [40.746, -73.906],
-    "Yorkville": [40.779, -73.953],
-    "Unknown": [40.750, -73.900],
-    "JFK Airport": [40.641, -73.778],
-    "Upper East Side North": [40.776, -73.955],
-    "Upper East Side South": [40.770, -73.961],
-    "Upper West Side North": [40.793, -73.972],
-    "Upper West Side South": [40.780, -73.979],
-    "Lincoln Square East": [40.771, -73.983],
-    "Lincoln Square West": [40.774, -73.989],
-    "Clinton East": [40.763, -73.991],
-    "Clinton West": [40.765, -73.996],
-    "East Harlem North": [40.803, -73.935],
-    "East Harlem South": [40.791, -73.944],
-    "Murray Hill-Queens": [40.764, -73.812],
-    "Morningside Heights": [40.809, -73.961],
-    "Astoria": [40.764, -73.923],
-    "Long Island City/Hunters Point": [40.743, -73.950],
-    "Long Island City/Queens Plaza": [40.750, -73.940],
-    "Sunnyside": [40.743, -73.921],
-    "Woodside": [40.745, -73.905],
-};
+const dropIcon = L.divIcon({
+  className: "",
+  html: `<div style="display:flex;flex-direction:column;align-items:center;">
+    <div style="background:#EF4444;color:white;font-size:10px;font-weight:900;padding:3px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 8px rgba(239,68,68,0.5);">DROP</div>
+    <div style="width:2px;height:8px;background:#EF4444;"></div>
+    <div style="width:10px;height:10px;background:#EF4444;border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
+  </div>`,
+  iconSize: [40, 40], iconAnchor: [20, 40]
+});
+
 
 function ChangeView({ bounds }) {
   const map = useMap();
@@ -184,13 +46,25 @@ export default function PricesNearYou() {
   const [maxBudget, setMaxBudget] = useState("");
   const [autoFilled, setAutoFilled] = useState(false);
   const [zones, setZones] = useState([]);
+
+  const [pickupSuggestions, setPickupSuggestions] = useState([]);
+  const [dropoffSuggestions, setDropoffSuggestions] = useState([]);
+  const [showPickup, setShowPickup] = useState(false);
+  const [showDropoff, setShowDropoff] = useState(false);
+  const pickupRef = useRef(null);
+  const dropoffRef = useRef(null);
   
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [selectedZone, setSelectedZone] = useState(null)
+  const [mapStyle, setMapStyle] = useState('default')
 
   useEffect(() => {
-    getZoneList().then(r => setZones(r.data || [])).catch(() => {});
+    getZoneList().then(r => {
+      const list = Array.isArray(r.data) ? r.data : [];
+      setZones(list.map(z => z.pickup_zone || z).filter(Boolean).sort());
+    }).catch(() => {});
     
     const saved = localStorage.getItem("lastRoute");
     if (saved) {
@@ -201,6 +75,25 @@ export default function PricesNearYou() {
     }
   }, []);
 
+  // Smart filter: starts-with first, then includes
+  const filterZones = (query, limit = 10) => {
+    if (!query) return zones.slice(0, limit);
+    const q = query.toLowerCase();
+    const startsWith = zones.filter(z => z.toLowerCase().startsWith(q));
+    const includes = zones.filter(z => !z.toLowerCase().startsWith(q) && z.toLowerCase().includes(q));
+    return [...startsWith, ...includes].slice(0, limit);
+  };
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (pickupRef.current && !pickupRef.current.contains(e.target)) setShowPickup(false);
+      if (dropoffRef.current && !dropoffRef.current.contains(e.target)) setShowDropoff(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const search = () => {
     if (!pickupZone) {
       setError("Please enter a pickup zone.");
@@ -208,23 +101,74 @@ export default function PricesNearYou() {
     }
     setLoading(true)
     setError("")
-    
+    setSelectedZone(null)
+
     const params = {
       zone: pickupZone,
       dropoff_zone: dropoffZone || undefined,
-      budget: maxBudget ? parseFloat(maxBudget) : undefined
     }
 
     getNearbyPrice(params)
       .then(r => {
-        let filtered = r.data.cheapest_nearby_zones || [];
-        if (minBudget) {
-          filtered = filtered.filter(z => (z.avg_price || 0) >= parseFloat(minBudget));
+        if (!r.data || typeof r.data !== 'object') {
+          setError("Zone not found. Please select a zone from the dropdown list.");
+          return;
         }
+
+        const allNearby = r.data.cheapest_nearby_zones || [];
+        const pickupCoords = NYC_ZONE_COORDS[pickupZone];
+        const dropCoords = dropoffZone ? NYC_ZONE_COORDS[dropoffZone] : null;
+
+        // Haversine distance in km
+        const haversine = (c1, c2) => {
+          if (!c1 || !c2) return 999;
+          const R = 6371;
+          const dLat = (c2[0]-c1[0]) * Math.PI/180;
+          const dLon = (c2[1]-c1[1]) * Math.PI/180;
+          const a = Math.sin(dLat/2)**2 + Math.cos(c1[0]*Math.PI/180)*Math.cos(c2[0]*Math.PI/180)*Math.sin(dLon/2)**2;
+          return R * 2 * Math.asin(Math.sqrt(a));
+        }
+
+        // Recalculate distance from actual pickup coords for every zone
+        let enriched = allNearby.map(z => ({
+          ...z,
+          walking_distance_km: pickupCoords
+            ? haversine(pickupCoords, NYC_ZONE_COORDS[z.pickup_zone])
+            : (z.walking_distance_km || 999)
+        }));
+
+        // Check if pickup zone itself is closest to drop location
+        let closestToDropMsg = null;
+        if (dropCoords && pickupCoords) {
+          const pickupToDrop = haversine(pickupCoords, dropCoords);
+          const nearbyWithDrop = enriched.map(z => ({
+            ...z,
+            distToDrop: haversine(NYC_ZONE_COORDS[z.pickup_zone] || pickupCoords, dropCoords)
+          }));
+          const closestAlt = nearbyWithDrop.sort((a,b) => a.distToDrop - b.distToDrop)[0];
+          if (!closestAlt || pickupToDrop <= (closestAlt?.distToDrop || 999)) {
+            closestToDropMsg = `Your pickup zone "${pickupZone}" is already the closest to "${dropoffZone}" (${pickupToDrop.toFixed(2)} km away).`;
+          }
+        }
+
+        // Filter to zones within 1km of pickup
+        let filtered = enriched
+          .filter(z => z.walking_distance_km <= 1)
+          .sort((a,b) => a.walking_distance_km - b.walking_distance_km);
+
+        if (filtered.length === 0) filtered = enriched.sort((a,b) => a.walking_distance_km - b.walking_distance_km).slice(0,5);
+
+        // Apply budget filters
+        if (minBudget) filtered = filtered.filter(z => (z.avg_price || 0) >= parseFloat(minBudget));
+        if (maxBudget) filtered = filtered.filter(z => (z.avg_price || 0) <= parseFloat(maxBudget));
+        if (filtered.length === 0) filtered = enriched.sort((a,b) => a.walking_distance_km - b.walking_distance_km).slice(0,5);
+
+        if (closestToDropMsg) setError(closestToDropMsg);
+
         setResults({ ...r.data, filtered_zones: filtered });
       })
       .catch((err) => {
-        setError("Could not find zones. Please check the spelling of the pickup zone.");
+        setError("Could not load zones. Please try again.");
         console.error(err);
       })
       .finally(() => setLoading(false))
@@ -235,7 +179,7 @@ export default function PricesNearYou() {
 
   // Calculate price range for coloring
   const priceStats = useMemo(() => {
-    if (!results || results.filtered_zones.length === 0) return { min: 0, max: 0 };
+    if (!results || !results.filtered_zones || results.filtered_zones.length === 0) return { min: 0, max: 0 };
     const prices = results.filtered_zones.map(z => z.avg_price || 0);
     return { min: Math.min(...prices), max: Math.max(...prices) };
   }, [results]);
@@ -250,7 +194,7 @@ export default function PricesNearYou() {
   };
 
   const mapMarkers = useMemo(() => {
-    if (!results) return [];
+    if (!results || !results.filtered_zones) return [];
     const markers = [];
     
     // Add current pickup zone
@@ -259,10 +203,26 @@ export default function PricesNearYou() {
       markers.push({
         lat: currentCoords[0],
         lng: currentCoords[1],
-        name: `${pickupZone} (Your Current Area)`,
+        name: `${pickupZone}`,
         price: null,
-        isCurrent: true
+        isCurrent: true,
+        isDrop: false
       });
+    }
+
+    // Add dropoff zone if provided
+    if (dropoffZone) {
+      const dropCoords = NYC_ZONE_COORDS[dropoffZone];
+      if (dropCoords) {
+        markers.push({
+          lat: dropCoords[0],
+          lng: dropCoords[1],
+          name: dropoffZone,
+          price: null,
+          isCurrent: false,
+          isDrop: true
+        });
+      }
     }
 
     // Add cheaper zones
@@ -274,7 +234,9 @@ export default function PricesNearYou() {
           lng: coords[1],
           name: z.pickup_zone,
           price: z.avg_price,
-          isCurrent: false
+          walking_distance_km: z.walking_distance_km || 0,
+          isCurrent: false,
+          isDrop: false
         });
       }
     });
@@ -312,48 +274,91 @@ export default function PricesNearYou() {
           boxShadow: "0 20px 25px -5px rgba(0,0,0,0.05)", 
           border: darkMode ? "1px solid #374151" : `1px solid #F1F5F9`,
           position: "relative",
-          overflow: "hidden"
+          overflow: "visible"
         }}>
-          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "6px", background: `linear-gradient(90deg, ${primaryColor}, #F97316)` }}></div>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "6px", background: `linear-gradient(90deg, ${primaryColor}, #F97316)`, borderRadius: "24px 24px 0 0" }}></div>
 
           <div style={{ display: "grid", gap: "24px", marginBottom: "32px" }}>
-            <div>
+            <div ref={pickupRef} style={{ position: "relative" }}>
               <label style={{ fontSize: "11px", fontWeight: "900", color: "#64748B", marginBottom: "10px", display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Pickup Area</label>
               <input 
-                list="pickup-zones-budget"
                 placeholder="Where are you starting?"
                 value={pickupZone} 
-                onChange={e => setPickupZone(e.target.value)} 
+                onChange={e => {
+                  setPickupZone(e.target.value);
+                  setPickupSuggestions(filterZones(e.target.value));
+                  setShowPickup(true);
+                }}
+                onFocus={() => {
+                  setPickupSuggestions(filterZones(pickupZone));
+                  setShowPickup(true);
+                }}
                 style={{
                   width: "100%", padding: "16px", borderRadius: "14px",
                   background: darkMode ? "#111827" : "#F8FAFC", 
                   border: darkMode ? "1px solid #374151" : "1px solid #E2E8F0",
                   color: darkMode ? "#F9FAFB" : "#111827", fontSize: "15px", fontWeight: "700",
-                  outline: "none"
+                  outline: "none", boxSizing: "border-box"
                 }}
               />
-              <datalist id="pickup-zones-budget">
-                {zones.map(z => <option key={z} value={z} />)}
-              </datalist>
+              {showPickup && pickupSuggestions.length > 0 && (
+                <div style={{
+                  position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999,
+                  background: darkMode ? "#1F2937" : "white", borderRadius: "14px",
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.12)", border: darkMode ? "1px solid #374151" : "1px solid #E2E8F0",
+                  maxHeight: "220px", overflowY: "auto", marginTop: "6px"
+                }}>
+                  {pickupSuggestions.map(z => (
+                    <div key={z} onMouseDown={() => { setPickupZone(z); setShowPickup(false); }}
+                      style={{ padding: "12px 16px", cursor: "pointer", fontSize: "14px", fontWeight: "700",
+                        color: darkMode ? "#F9FAFB" : "#111827", borderBottom: darkMode ? "1px solid #374151" : "1px solid #F3F4F6" }}
+                      onMouseEnter={e => e.currentTarget.style.background = darkMode ? "#374151" : "#F8FAFC"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    >📍 {z}</div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div>
+
+            <div ref={dropoffRef} style={{ position: "relative" }}>
               <label style={{ fontSize: "11px", fontWeight: "900", color: "#64748B", marginBottom: "10px", display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Dropoff Area (Optional)</label>
               <input 
-                list="dropoff-zones-budget"
                 placeholder="Where to?"
                 value={dropoffZone} 
-                onChange={e => setDropoffZone(e.target.value)} 
+                onChange={e => {
+                  setDropoffZone(e.target.value);
+                  setDropoffSuggestions(filterZones(e.target.value));
+                  setShowDropoff(true);
+                }}
+                onFocus={() => {
+                  setDropoffSuggestions(filterZones(dropoffZone));
+                  setShowDropoff(true);
+                }}
                 style={{
                   width: "100%", padding: "16px", borderRadius: "14px",
                   background: darkMode ? "#111827" : "#F8FAFC", 
                   border: darkMode ? "1px solid #374151" : "1px solid #E2E8F0",
                   color: darkMode ? "#F9FAFB" : "#111827", fontSize: "15px", fontWeight: "700",
-                  outline: "none"
+                  outline: "none", boxSizing: "border-box"
                 }}
               />
-              <datalist id="dropoff-zones-budget">
-                {zones.map(z => <option key={z} value={z} />)}
-              </datalist>
+              {showDropoff && dropoffSuggestions.length > 0 && (
+                <div style={{
+                  position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999,
+                  background: darkMode ? "#1F2937" : "white", borderRadius: "14px",
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.12)", border: darkMode ? "1px solid #374151" : "1px solid #E2E8F0",
+                  maxHeight: "220px", overflowY: "auto", marginTop: "6px"
+                }}>
+                  {dropoffSuggestions.map(z => (
+                    <div key={z} onMouseDown={() => { setDropoffZone(z); setShowDropoff(false); }}
+                      style={{ padding: "12px 16px", cursor: "pointer", fontSize: "14px", fontWeight: "700",
+                        color: darkMode ? "#F9FAFB" : "#111827", borderBottom: darkMode ? "1px solid #374151" : "1px solid #F3F4F6" }}
+                      onMouseEnter={e => e.currentTarget.style.background = darkMode ? "#374151" : "#F8FAFC"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    >🏁 {z}</div>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
               <div>
@@ -400,7 +405,18 @@ export default function PricesNearYou() {
             {loading ? "SEARCHING..." : "FIND CHEAPER ZONES 🔎"}
           </button>
 
-          {error && <div style={{ color: "#EF4444", fontWeight: "800", marginTop: "20px", textAlign: "center", fontSize: "14px" }}>⚠️ {error}</div>}
+          {error && (
+            <div style={{
+              fontWeight: "800", marginTop: "20px", textAlign: "center", fontSize: "13px",
+              padding: "10px 14px", borderRadius: "10px",
+              background: error.includes('closest') ? "#EFF6FF" : "#FEF2F2",
+              color: error.includes('closest') ? "#1E40AF" : "#EF4444",
+              border: error.includes('closest') ? "1px solid #BFDBFE" : "1px solid #FECACA"
+            }}>
+              {error.includes('closest') ? 'ℹ️' : '⚠️'} {error}
+            </div>
+          )}
+
         </div>
 
         {/* Map Panel */}
@@ -418,40 +434,76 @@ export default function PricesNearYou() {
             zoom={12} 
             style={{ height: "100%", width: "100%", borderRadius: "16px", zIndex: 0 }}
           >
+            {/* Map Style Toggle */}
+            <div style={{ position: "absolute", top: "12px", left: "12px", zIndex: 1000, display: "flex", gap: "4px", background: "rgba(255,255,255,0.92)", padding: "4px", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
+              {[{id:'default',label:'🗺️',title:'Default'},{id:'satellite',label:'🛰️',title:'Satellite'},{id:'street',label:'🏙️',title:'Street'}].map(s => (
+                <button key={s.id} onClick={() => setMapStyle(s.id)} title={s.title} style={{
+                  padding: "5px 9px", borderRadius: "7px", fontSize: "14px", border: "none", cursor: "pointer",
+                  background: mapStyle === s.id ? "#003580" : "transparent", transition: "all 0.2s"
+                }}>{s.label}</button>
+              ))}
+            </div>
             <TileLayer
-              url={darkMode 
-                ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              url={
+                mapStyle === 'satellite'
+                  ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                  : mapStyle === 'street'
+                  ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                  : darkMode
+                  ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                  : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
               }
               attribution='&copy; CARTO'
             />
             {mapMarkers.map((m, i) => (
               m.isCurrent ? (
                 <Marker key={i} position={[m.lat, m.lng]} icon={pickupIcon}>
-                  <Popup>
-                    <div style={{ fontWeight: "800" }}>{m.name}</div>
-                    <div style={{ color: "#3B82F6" }}>Your Start Location</div>
-                  </Popup>
+                  <Tooltip direction="top" offset={[0, -16]} opacity={0.95}>
+                    <div style={{ fontWeight: "900", fontSize: "12px", color: "#1E40AF" }}>📍 {m.name}</div>
+                    <div style={{ fontWeight: "700", fontSize: "11px", color: "#3B82F6" }}>Your pickup</div>
+                  </Tooltip>
+                </Marker>
+              ) : m.isDrop ? (
+                <Marker key={i} position={[m.lat, m.lng]} icon={dropIcon}>
+                  <Tooltip direction="top" offset={[0, -44]} opacity={0.95}>
+                    <div style={{ fontWeight: "900", fontSize: "12px", color: "#DC2626" }}>🏁 {m.name}</div>
+                    <div style={{ fontWeight: "700", fontSize: "11px", color: "#EF4444" }}>Drop location</div>
+                  </Tooltip>
                 </Marker>
               ) : (
                 <CircleMarker
                   key={i}
                   center={[m.lat, m.lng]}
-                  radius={10}
+                  radius={selectedZone?.name === m.name ? 16 : 11}
                   pathOptions={{ 
-                    color: getMarkerColor(m.price), 
+                    color: selectedZone?.name === m.name ? "#FFB800" : "#fff",
                     fillColor: getMarkerColor(m.price), 
-                    fillOpacity: 0.8,
-                    weight: 2
+                    fillOpacity: 0.95,
+                    weight: selectedZone?.name === m.name ? 3.5 : 2.5
+                  }}
+                  eventHandlers={{
+                    click: () => setSelectedZone(selectedZone?.name === m.name ? null : m),
                   }}
                 >
-                  <Popup>
-                    <div style={{ fontWeight: "800" }}>{m.name}</div>
-                    <div style={{ color: "#10B981", fontWeight: "900", fontSize: "16px" }}>${m.price?.toFixed(2)}</div>
-                  </Popup>
+                  <Tooltip direction="top" offset={[0, -10]} opacity={0.95}>
+                    <div style={{ fontWeight: "800", fontSize: "12px", whiteSpace: "nowrap" }}>{m.name}</div>
+                    <div style={{ fontWeight: "900", fontSize: "13px", color: getMarkerColor(m.price) }}>${m.price?.toFixed(2)} avg fare</div>
+                    <div style={{ fontSize: "11px", color: "#6B7280", marginTop: "2px" }}>Click to see path</div>
+                  </Tooltip>
                 </CircleMarker>
               )
             ))}
+
+            {/* Dashed path from pickup to selected zone */}
+            {selectedZone && NYC_ZONE_COORDS[pickupZone] && (
+              <Polyline
+                positions={[
+                  [NYC_ZONE_COORDS[pickupZone][0], NYC_ZONE_COORDS[pickupZone][1]],
+                  [selectedZone.lat, selectedZone.lng]
+                ]}
+                pathOptions={{ color: "#FFB800", weight: 3, opacity: 0.9, dashArray: "10, 8" }}
+              />
+            )}
             {mapBounds && <ChangeView bounds={mapBounds} />}
           </MapContainer>
           
@@ -481,9 +533,67 @@ export default function PricesNearYou() {
               }}></div>
               <span>Your Starting Area</span>
             </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+              <div style={{ background: "#EF4444", color: "white", fontSize: "9px", fontWeight: "900", padding: "2px 5px", borderRadius: "4px" }}>DROP</div>
+              <span>Drop Location</span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Selected Zone Info Card */}
+      {selectedZone && (
+        <div style={{
+          marginTop: "20px",
+          background: darkMode ? "#1F2937" : "#FFFBEB",
+          border: `2px solid #FFB800`,
+          borderRadius: "20px",
+          padding: "20px 28px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "16px",
+          animation: "fadeIn 0.3s ease"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div style={{
+              width: "44px", height: "44px", borderRadius: "12px",
+              background: getMarkerColor(selectedZone.price) + "22",
+              display: "grid", placeItems: "center", fontSize: "22px"
+            }}>📍</div>
+            <div>
+              <div style={{ fontWeight: "900", fontSize: "18px", color: darkMode ? "#F9FAFB" : "#003580" }}>
+                {selectedZone.name}
+              </div>
+              <div style={{ fontSize: "13px", color: "#6B7280", fontWeight: "600", marginTop: "2px" }}>
+                Path from <strong>{pickupZone}</strong> → <strong>{selectedZone.name}</strong>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "24px", fontWeight: "900", color: getMarkerColor(selectedZone.price) }}>
+                ${selectedZone.price?.toFixed(2)}
+              </div>
+              <div style={{ fontSize: "10px", fontWeight: "800", color: "#9CA3AF", textTransform: "uppercase" }}>Avg Fare</div>
+            </div>
+            {selectedZone.walking_distance_km > 0 && (
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "20px", fontWeight: "900", color: "#3B82F6" }}>
+                  🚶 {selectedZone.walking_distance_km?.toFixed(2)} km
+                </div>
+                <div style={{ fontSize: "10px", fontWeight: "800", color: "#9CA3AF", textTransform: "uppercase" }}>Walking</div>
+              </div>
+            )}
+            <button onClick={() => setSelectedZone(null)} style={{
+              background: "transparent", border: "1px solid #E5E7EB", borderRadius: "8px",
+              padding: "6px 12px", cursor: "pointer", fontSize: "12px", fontWeight: "700",
+              color: "#6B7280"
+            }}>✕ Clear</button>
+          </div>
+        </div>
+      )}
 
       {results && (
         <div style={{ marginTop: "40px", display: "grid", gap: "20px" }}>
@@ -493,27 +603,61 @@ export default function PricesNearYou() {
               results.filtered_zones.map((r, i) => (
                 <div key={i} className="result-card" style={{ 
                   background: darkMode ? "#1F2937" : "white", padding: "24px", borderRadius: "20px",
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
                   border: `1px solid ${getMarkerColor(r.avg_price)}33`,
                   boxShadow: "0 10px 15px -3px rgba(0,0,0,0.03)",
                   transition: "all 0.3s",
                   borderLeft: `6px solid ${getMarkerColor(r.avg_price)}`
                 }}>
-                  <div>
-                    <p style={{ fontWeight: "900", fontSize: "18px", color: darkMode ? "#F9FAFB" : secondaryColor, marginBottom: "4px" }}>{r.pickup_zone}</p>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{ fontSize: "10px", color: "#64748B", fontWeight: "900", textTransform: "uppercase", background: darkMode ? "#111827" : "#F1F5F9", padding: "4px 8px", borderRadius: "6px" }}>{r.pickup_borough}</span>
-                      {r.walking_distance_km > 0 && (
-                         <span style={{ fontSize: "11px", color: "#10B981", fontWeight: "800" }}>
-                           🚶 {r.walking_distance_km.toFixed(2)} km
-                         </span>
-                      )}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <p style={{ fontWeight: "900", fontSize: "18px", color: darkMode ? "#F9FAFB" : secondaryColor, marginBottom: "6px" }}>{r.pickup_zone}</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "10px", color: "#64748B", fontWeight: "900", textTransform: "uppercase", background: darkMode ? "#111827" : "#F1F5F9", padding: "4px 8px", borderRadius: "6px" }}>{r.pickup_borough}</span>
+                        {r.walking_distance_km > 0 && (
+                          <span style={{
+                            fontSize: "11px", fontWeight: "900", padding: "4px 10px", borderRadius: "20px",
+                            background: r.walking_distance_km <= 0.5 ? "#DCFCE7" : r.walking_distance_km <= 1 ? "#FEF9C3" : "#FEE2E2",
+                            color: r.walking_distance_km <= 0.5 ? "#166534" : r.walking_distance_km <= 1 ? "#854D0E" : "#991B1B",
+                            display: "flex", alignItems: "center", gap: "4px"
+                          }}>
+                            🚶 {r.walking_distance_km < 1
+                              ? Math.round(r.walking_distance_km * 1000) + ' m'
+                              : r.walking_distance_km.toFixed(2) + ' km'} walk
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <p style={{ fontSize: "24px", fontWeight: "900", color: getMarkerColor(r.avg_price) }}>${r.avg_price?.toFixed(2)}</p>
+                      <p style={{ fontSize: "10px", fontWeight: "900", color: "#94A3B8", textTransform: "uppercase" }}>Avg Fare</p>
                     </div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <p style={{ fontSize: "24px", fontWeight: "900", color: getMarkerColor(r.avg_price) }}>${r.avg_price?.toFixed(2)}</p>
-                    <p style={{ fontSize: "10px", fontWeight: "900", color: "#94A3B8", textTransform: "uppercase" }}>Avg Fare</p>
-                  </div>
+                  {/* Exact location row */}
+                  {NYC_ZONE_COORDS[r.pickup_zone] && (
+                    <div style={{
+                      marginTop: "12px", paddingTop: "12px",
+                      borderTop: `1px solid ${darkMode ? "#374151" : "#F1F5F9"}`,
+                      display: "flex", alignItems: "center", justifyContent: "space-between"
+                    }}>
+                      <span style={{ fontSize: "11px", color: darkMode ? "#9CA3AF" : "#64748B", fontWeight: "700" }}>
+                        📌 {NYC_ZONE_COORDS[r.pickup_zone][0].toFixed(4)}°N, {Math.abs(NYC_ZONE_COORDS[r.pickup_zone][1]).toFixed(4)}°W
+                      </span>
+                      <a
+                        href={`https://www.google.com/maps?q=${NYC_ZONE_COORDS[r.pickup_zone][0]},${NYC_ZONE_COORDS[r.pickup_zone][1]}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: "11px", fontWeight: "800", color: "#3B82F6",
+                          textDecoration: "none", display: "flex", alignItems: "center", gap: "4px",
+                          padding: "4px 10px", borderRadius: "8px",
+                          background: darkMode ? "#1E3A8A22" : "#EFF6FF",
+                          border: "1px solid #BFDBFE"
+                        }}
+                      >
+                        🗺️ View on Maps
+                      </a>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (

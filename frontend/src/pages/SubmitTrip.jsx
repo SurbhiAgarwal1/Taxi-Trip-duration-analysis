@@ -22,9 +22,8 @@ export default function RateYourTrip() {
   useEffect(() => {
     // Fetch zones for the dropdown
     getZoneList().then(res => {
-      if (res.data && res.data.zones) {
-        setZones(res.data.zones.sort());
-      }
+      const list = Array.isArray(res.data) ? res.data : [];
+      setZones(list.map(z => z.pickup_zone || z).filter(Boolean).sort());
     }).catch(err => console.error("Failed to fetch zones:", err));
 
     // Fetch locations and distance from last route
@@ -59,14 +58,17 @@ export default function RateYourTrip() {
     setLoading(true)
     setError('')
     
+    const now = new Date()
+    const dropoff = new Date(now.getTime() + (parseFloat(duration) || 10) * 60000)
+
     const payload = {
       user_name: user?.username || 'Guest',
       user_email: user?.email || '',
       user_role: user?.role || 'user',
       pickup_location: pickupLocation,
       drop_location: dropoffLocation,
-      pickup_time: new Date().toISOString(),
-      dropoff_time: new Date().toISOString(),
+      pickup_time: now.toISOString(),
+      dropoff_time: dropoff.toISOString(),
       price: parseFloat(actualPrice),
       trip_distance: parseFloat(distance) || 0,
       rating: rating
