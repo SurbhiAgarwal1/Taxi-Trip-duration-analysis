@@ -50,6 +50,128 @@ function FitBounds({ bounds }) {
   return null;
 }
 
+const NYC_ZONE_COORDS = {
+    "Alphabet City": [40.726, -73.978],
+    "Battery Park": [40.703, -74.017],
+    "Battery Park City": [40.713, -74.017],
+    "Bedford Park": [40.869, -73.897],
+    "Bensonhurst": [40.602, -73.972],
+    "Briarwood/Jamaica": [40.708, -73.809],
+    "Bronx Park": [40.856, -73.878],
+    "Brooklyn Heights": [40.696, -73.994],
+    "Brooklyn Navy Yard": [40.700, -73.974],
+    "Bushwick North": [40.694, -73.921],
+    "Bushwick South": [40.698, -73.921],
+    "Canarsie": [40.633, -73.898],
+    "Central Park": [40.785, -73.968],
+    "Chelsea": [40.747, -74.003],
+    "Chinatown": [40.716, -73.997],
+    "Coney Island": [40.576, -73.968],
+    "Crown Heights North": [40.671, -73.950],
+    "Crown Heights South": [40.661, -73.950],
+    "DUMBO/Vinegar Hill": [40.703, -73.988],
+    "East Chelsea": [40.745, -73.997],
+    "East Flatbush": [40.647, -73.957],
+    "East Harlem": [40.797, -73.943],
+    "East New York": [40.662, -73.903],
+    "East Village": [40.726, -73.983],
+    "Fieldston": [40.895, -73.906],
+    "Financial District North": [40.709, -74.011],
+    "Financial District South": [40.707, -74.013],
+    "Flatbush": [40.646, -73.955],
+    "Flushing": [40.758, -73.833],
+    "Fordham": [40.867, -73.888],
+    "Fort Hamilton": [40.641, -73.996],
+    "Freshkills": [40.580, -74.147],
+    "Garment District": [40.754, -73.997],
+    "Glen Oaks": [40.747, -73.710],
+    "Gramercy": [40.736, -73.981],
+    "Greenwich Village North": [40.733, -73.997],
+    "Greenwich Village South": [40.730, -73.997],
+    "Harlem": [40.810, -73.945],
+    "Highbridge": [40.838, -73.921],
+    "Hunts Point": [40.817, -73.881],
+    "Jackson Heights": [40.756, -73.883],
+    "Jamaica": [40.700, -73.808],
+    "Jamaica Estates": [40.721, -73.791],
+    "Kips Bay": [40.743, -73.979],
+    "LaGuardia Airport": [40.776, -73.874],
+    "Lower East Side": [40.718, -73.988],
+    "Manhattan Valley": [40.799, -73.963],
+    "Mechanicsville": [40.635, -74.076],
+    "Midtown Central": [40.754, -73.984],
+    "Midtown East": [40.755, -73.967],
+    "Midtown North": [40.765, -73.984],
+    "Midtown South": [40.748, -73.987],
+    "Midwood": [40.605, -73.965],
+    "Morningside Heights": [40.809, -73.961],
+    "Morris Heights": [40.862, -73.913],
+    "Morrison Heights": [40.819, -73.904],
+    "Mount Hope": [40.857, -73.896],
+    "Murray Hill": [40.748, -73.978],
+    "Newark Airport": [40.689, -74.174],
+    "Oakland Gardens": [40.738, -73.757],
+    "Park Slope": [40.671, -73.977],
+    "Parkchester": [40.833, -73.857],
+    "Pelham": [40.849, -73.840],
+    "Pelham Bay": [40.858, -73.826],
+    "Pomonok": [40.729, -73.730],
+    "Port Richmond": [40.631, -74.094],
+    "Prospect Heights": [40.677, -73.971],
+    "Prospect Park": [40.660, -73.969],
+    "Queens": [40.728, -73.794],
+    "Queens Village": [40.724, -73.765],
+    "Rego Park": [40.722, -73.866],
+    "Richmond Hill": [40.698, -73.849],
+    "Ridgewood": [40.711, -73.897],
+    "Riverdale": [40.890, -73.912],
+    "Rockaway": [40.580, -73.850],
+    "Roosevelt Island": [40.761, -73.945],
+    "Sheepshead Bay": [40.594, -73.944],
+    "SoHo": [40.723, -73.997],
+    "South Bronx": [40.808, -73.917],
+    "South Brooklyn": [40.655, -73.991],
+    "South Sunset Park": [40.651, -73.986],
+    "Spuyten Duyvil": [40.883, -73.912],
+    "St. George": [40.643, -74.073],
+    "Stapleton": [40.630, -74.082],
+    "Sunnyside": [40.745, -73.904],
+    "Times Square": [40.758, -73.985],
+    "TriBeCa/Civic Center": [40.716, -74.006],
+    "Tunnel": [40.728, -73.937],
+    "Upper East Side": [40.773, -73.959],
+    "Upper West Side": [40.787, -73.975],
+    "Van Cortlandt Park": [40.893, -73.899],
+    "Washington Heights": [40.842, -73.940],
+    "West Chelsea": [40.750, -74.005],
+    "West Village": [40.734, -74.006],
+    "Williamsburg North": [40.721, -73.958],
+    "Williamsburg South": [40.708, -73.957],
+    "Woodhaven": [40.691, -73.856],
+    "Woodlawn": [40.896, -73.876],
+    "Woodside": [40.746, -73.906],
+    "Yorkville": [40.779, -73.953],
+    "Unknown": [40.750, -73.900],
+    "JFK Airport": [40.641, -73.778],
+    "Upper East Side North": [40.776, -73.955],
+    "Upper East Side South": [40.770, -73.961],
+    "Upper West Side North": [40.793, -73.972],
+    "Upper West Side South": [40.780, -73.979],
+    "Lincoln Square East": [40.771, -73.983],
+    "Lincoln Square West": [40.774, -73.989],
+    "Clinton East": [40.763, -73.991],
+    "Clinton West": [40.765, -73.996],
+    "East Harlem North": [40.803, -73.935],
+    "East Harlem South": [40.791, -73.944],
+    "Murray Hill-Queens": [40.764, -73.812],
+    "Morningside Heights": [40.809, -73.961],
+    "Astoria": [40.764, -73.923],
+    "Long Island City/Hunters Point": [40.743, -73.950],
+    "Long Island City/Queens Plaza": [40.750, -73.940],
+    "Sunnyside": [40.743, -73.921],
+    "Woodside": [40.745, -73.905],
+};
+
 function calculateBearing(start, end) {
   if (!start || !end) return 0;
   const lat1 = (start[0] * Math.PI) / 180;
@@ -78,9 +200,46 @@ export default function TrafficMap() {
   const [pickupCoords, setPickupCoords] = useState(null);
   const [dropoffCoords, setDropoffCoords] = useState(null);
 
+  // Check for pending route from Corridor Dashboard
+  useEffect(() => {
+    const pending = localStorage.getItem("pendingRoute");
+    if (pending) {
+      const { pickup, dropoff } = JSON.parse(pending);
+      setPickupLocation(pickup);
+      setDropoffLocation(dropoff);
+      localStorage.setItem("isAutoTracking", "true");
+      localStorage.removeItem("pendingRoute");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (pickupLocation && dropoffLocation && !routeInfo && !loading) {
+       // Only auto-trigger if we just came from the dashboard
+       const wasPending = !localStorage.getItem("pendingRoute"); 
+       if (wasPending) analyzeRoute();
+    }
+  }, [pickupLocation, dropoffLocation]);
+
   async function geocodeLocation(locationName) {
+    // 1. Try exact match from internal coordinates
+    if (NYC_ZONE_COORDS[locationName]) {
+      const c = NYC_ZONE_COORDS[locationName];
+      return { lat: c[0], lng: c[1] };
+    }
+
+    // 2. Try fuzzy match (if the zone name is part of our internal keys)
+    const fuzzyKey = Object.keys(NYC_ZONE_COORDS).find(k => 
+      k.toLowerCase().includes(locationName.toLowerCase()) || 
+      locationName.toLowerCase().includes(k.toLowerCase())
+    );
+    if (fuzzyKey) {
+      const c = NYC_ZONE_COORDS[fuzzyKey];
+      return { lat: c[0], lng: c[1] };
+    }
+
+    // 3. Fallback to external Nominatim API
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationName)}&format=json&limit=1`,
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationName + ", New York City")}&format=json&limit=1`,
       {
         headers: {
           "Accept-Language": "en",
@@ -135,6 +294,14 @@ export default function TrafficMap() {
       
       const coords = data.geometry.map(([lng, lat]) => [lat, lng]);
       setRouteGeometry(coords);
+      
+      // Automatically start ride if this was a jump from the dashboard
+      if (localStorage.getItem("isAutoTracking") === "true") {
+        setRideStarted(true);
+        setCurrentStep(0);
+        setTaxiPosition(coords[0]);
+        localStorage.removeItem("isAutoTracking");
+      }
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to fetch route data.');

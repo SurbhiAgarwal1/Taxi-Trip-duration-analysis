@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { submitTripFeedbackExtended } from '../api/client'
+import { submitTripFeedbackExtended, getZoneList } from '../api/client'
 import { useTheme } from '../context/ThemeContext'
 
 export default function RateYourTrip() {
@@ -17,8 +17,16 @@ export default function RateYourTrip() {
   const [tripTime, setTripTime] = useState("")
   const [rating, setRating] = useState(5)
   const [actualPrice, setActualPrice] = useState("")
+  const [zones, setZones] = useState([])
 
   useEffect(() => {
+    // Fetch zones for the dropdown
+    getZoneList().then(res => {
+      if (res.data && res.data.zones) {
+        setZones(res.data.zones.sort());
+      }
+    }).catch(err => console.error("Failed to fetch zones:", err));
+
     // Fetch locations and distance from last route
     const saved = localStorage.getItem("lastRoute");
     if (saved) {
@@ -127,27 +135,55 @@ export default function RateYourTrip() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
             <div>
               <label style={{ fontSize: "11px", fontWeight: "800", color: secondaryColor, marginBottom: "8px", display: "block", textTransform: "uppercase" }}>Pickup</label>
-              <input readOnly value={pickupLocation} style={{
-                width: "100%", padding: "12px", borderRadius: "10px",
-                background: "#F3F4F6", border: "1px solid #E5E7EB",
-                color: "#6B7280", fontSize: "13px", fontWeight: "700"
-              }} />
+              <input 
+                list="pickup-zones"
+                placeholder="Search or select pickup..."
+                value={pickupLocation} 
+                onChange={(e) => setPickupLocation(e.target.value)}
+                style={{
+                  width: "100%", padding: "12px", borderRadius: "10px",
+                  background: darkMode ? "#374151" : "#F9FAFB", 
+                  border: darkMode ? "1px solid #4B5563" : "1px solid #E5E7EB",
+                  color: darkMode ? "#F9FAFB" : secondaryColor, 
+                  fontSize: "13px", fontWeight: "700"
+                }} 
+              />
+              <datalist id="pickup-zones">
+                {zones.map(zone => <option key={zone} value={zone} />)}
+              </datalist>
             </div>
             <div>
               <label style={{ fontSize: "11px", fontWeight: "800", color: secondaryColor, marginBottom: "8px", display: "block", textTransform: "uppercase" }}>Dropoff</label>
-              <input readOnly value={dropoffLocation} style={{
-                width: "100%", padding: "12px", borderRadius: "10px",
-                background: "#F3F4F6", border: "1px solid #E5E7EB",
-                color: "#6B7280", fontSize: "13px", fontWeight: "700"
-              }} />
+              <input 
+                list="dropoff-zones"
+                placeholder="Search or select dropoff..."
+                value={dropoffLocation} 
+                onChange={(e) => setDropoffLocation(e.target.value)}
+                style={{
+                  width: "100%", padding: "12px", borderRadius: "10px",
+                  background: darkMode ? "#374151" : "#F9FAFB", 
+                  border: darkMode ? "1px solid #4B5563" : "1px solid #E5E7EB",
+                  color: darkMode ? "#F9FAFB" : secondaryColor, 
+                  fontSize: "13px", fontWeight: "700"
+                }} 
+              />
+              <datalist id="dropoff-zones">
+                {zones.map(zone => <option key={zone} value={zone} />)}
+              </datalist>
             </div>
             <div>
               <label style={{ fontSize: "11px", fontWeight: "800", color: secondaryColor, marginBottom: "8px", display: "block", textTransform: "uppercase" }}>Distance (km)</label>
-              <input readOnly value={distance} style={{
-                width: "100%", padding: "12px", borderRadius: "10px",
-                background: "#F3F4F6", border: "1px solid #E5E7EB",
-                color: "#6B7280", fontSize: "13px", fontWeight: "700"
-              }} />
+              <input 
+                value={distance} 
+                onChange={(e) => setDistance(e.target.value)}
+                style={{
+                  width: "100%", padding: "12px", borderRadius: "10px",
+                  background: darkMode ? "#374151" : "#F9FAFB", 
+                  border: darkMode ? "1px solid #4B5563" : "1px solid #E5E7EB",
+                  color: darkMode ? "#F9FAFB" : secondaryColor, 
+                  fontSize: "13px", fontWeight: "700"
+                }} 
+              />
             </div>
           </div>
 

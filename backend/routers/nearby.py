@@ -59,33 +59,6 @@ def nearby_price(
     else:
         results["walking_distance_km"] = 0.0
 
-    # Find current zone
-    zone_mask = results["pickup_zone"].str.lower().str.contains(zone.lower(), na=False)
-    current_zone = results[zone_mask]
-
-    # Get all zones sorted by price
-    sorted_zones = results.sort_values("avg_price").head(top)
-
-    # Nearby cheapest: same borough as current zone if found
-    nearby = []
-    if not current_zone.empty:
-        borough = current_zone.iloc[0]["pickup_borough"]
-        nearby_df = results[results["pickup_borough"] == borough]\
-            .sort_values(["avg_price", "walking_distance_km"]).head(top)
-        nearby = nearby_df.to_dict(orient="records")
-
-    return {
-        "query_zone": zone,
-        "dropoff_zone": dropoff_zone,
-        "budget": budget,
-        "current_zone_info": current_zone.to_dict(orient="records") if not current_zone.empty else None,
-        "cheapest_nearby_zones": nearby,
-        "cheapest_overall_zones": sorted_zones.to_dict(orient="records"),
-        "tip": (
-            f"Alternative zones near '{zone}' in the same borough. "
-            "Slightly longer walks can lead to significant fare reductions."
-        )
-    }
 
 
 @router.get("/price-comparison")
