@@ -1,14 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function Signup() {
-  const { signup } = useAuth()
+  const { signup, user } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ username: '', email: '', password: '', confirm: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
+
+  // Already logged in → go to dashboard
+  useEffect(() => {
+    if (user) navigate('/dashboard', { replace: true })
+  }, [user])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -25,7 +30,7 @@ export default function Signup() {
     const result = await signup(form.username, form.email, form.password)
     setLoading(false)
     if (result.success) navigate('/')
-    else setError(result.error)
+    else setError(result.error || 'Username or email already taken. Please try different credentials.')
   }
 
   const strength = form.password.length === 0 ? 0
@@ -215,6 +220,9 @@ export default function Signup() {
               <Link to="/login" className="text-[#003580] hover:text-[#FFB800] transition-colors ml-2 underline underline-offset-4 decoration-2 decoration-blue-100 hover:decoration-amber-200">
                 Sign In
               </Link>
+            </p>
+            <p className="text-slate-300 text-[10px] font-bold mt-3 tracking-wide">
+              Admin access is granted by an existing admin — not via signup.
             </p>
           </div>
         </div>

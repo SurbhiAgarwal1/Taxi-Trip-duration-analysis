@@ -59,33 +59,50 @@ def nearby_price(
     else:
         results["walking_distance_km"] = 0.0
 
-    # Find current zone
+    # Find current zone info
     zone_mask = results["pickup_zone"].str.lower().str.contains(zone.lower(), na=False)
     current_zone = results[zone_mask]
 
-    # Get all zones sorted by price
-    sorted_zones = results.sort_values("avg_price").head(top)
-
-    # Nearby cheapest: same borough as current zone if found
+    # Get nearby zones within 1km, sorted by distance then price
     nearby = []
     if not current_zone.empty:
-        borough = current_zone.iloc[0]["pickup_borough"]
-        nearby_df = results[results["pickup_borough"] == borough]\
-            .sort_values(["avg_price", "walking_distance_km"]).head(top)
-        nearby = nearby_df.to_dict(orient="records")
+        # Filter to zones with valid distance within 1km
+        within_1km = results[
+            (results["walking_distance_km"] > 0) &
+            (results["walking_distance_km"] <= 1.0)
+        ].copy()
+
+        # Exclude the pickup zone itself
+        if not current_zone.empty:
+            pickup_name = current_zone.iloc[0]["pickup_zone"]
+            within_1km = within_1km[within_1km["pickup_zone"] != pickup_name]
+
+        # Sort by distance first, then price
+        within_1km = within_1km.sort_values(["walking_distance_km", "avg_price"]).head(top)
+
+        # If no zones within 1km, fall back to same borough sorted by price
+        if within_1km.empty:
+            borough = current_zone.iloc[0]["pickup_borough"]
+            within_1km = results[results["pickup_borough"] == borough]\
+                .sort_values("avg_price").head(top)
+
+        nearby = within_1km.replace({np.nan: None}).to_dict(orient="records")
+
+    # Cheapest overall
+    sorted_zones = results.sort_values("avg_price").head(top)
 
     return {
         "query_zone": zone,
-        "dropoff_zone": dropoff_zone,
         "budget": budget,
-        "current_zone_info": current_zone.to_dict(orient="records") if not current_zone.empty else None,
+        "current_zone_info": current_zone.replace({np.nan: None}).to_dict(orient="records") if not current_zone.empty else None,
         "cheapest_nearby_zones": nearby,
-        "cheapest_overall_zones": sorted_zones.to_dict(orient="records"),
+        "cheapest_overall_zones": sorted_zones.replace({np.nan: None}).to_dict(orient="records"),
         "tip": (
-            f"Alternative zones near '{zone}' in the same borough. "
-            "Slightly longer walks can lead to significant fare reductions."
+            f"Zones in the same borough as '{zone}' sorted cheapest first. "
+            "Consider departing during off-peak hours for lower prices."
         )
     }
+
 
 
 @router.get("/price-comparison")

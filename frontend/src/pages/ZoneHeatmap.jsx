@@ -7,6 +7,7 @@ export default function BusyAreasMap() {
   const { darkMode } = useTheme();
   const [mapData, setMapData] = useState([])
   const [loading, setLoading] = useState(true)
+  const [mapStyle, setMapStyle] = useState('default')
 
   useEffect(() => {
     getZoneMapData()
@@ -54,13 +55,29 @@ export default function BusyAreasMap() {
         border: darkMode ? "1px solid #374151" : `1px solid #E5E7EB`,
         height: "500px", 
         overflow: "hidden",
-        marginBottom: "32px"
+        marginBottom: "32px",
+        position: "relative"
       }}>
+        {/* Map Style Toggle */}
+        <div style={{ position: "absolute", top: "16px", left: "16px", zIndex: 1000, display: "flex", gap: "4px", background: "rgba(255,255,255,0.9)", padding: "4px", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
+          {[{id:'default',label:'🗺️',title:'Default'},{id:'satellite',label:'🛰️',title:'Satellite'},{id:'street',label:'🏙️',title:'Street'}].map(s => (
+            <button key={s.id} onClick={() => setMapStyle(s.id)} title={s.title} style={{
+              padding: "5px 9px", borderRadius: "7px", fontSize: "14px", border: "none", cursor: "pointer",
+              background: mapStyle === s.id ? "#003580" : "transparent",
+              transition: "all 0.2s"
+            }}>{s.label}</button>
+          ))}
+        </div>
         <MapContainer center={[40.7128, -74.0060]} zoom={12} style={{ height: '100%', width: '100%' }}>
           <TileLayer
-            url={darkMode 
-              ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            url={
+              mapStyle === 'satellite'
+                ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                : mapStyle === 'street'
+                ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                : darkMode
+                ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
             }
             attribution='&copy; CARTO'
           />

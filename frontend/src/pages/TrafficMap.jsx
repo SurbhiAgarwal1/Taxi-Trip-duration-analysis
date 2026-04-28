@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { fetchLiveTraffic } from '../api/client';
+import { fetchLiveTraffic, getZoneList, estimatePrice } from '../api/client';
 import { useTheme } from '../context/ThemeContext';
+import NYC_ZONE_COORDS from '../data/zoneCoords';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -74,13 +75,86 @@ export default function TrafficMap() {
   const [taxiPosition, setTaxiPosition] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [rideCompleted, setRideCompleted] = useState(false);
+  const [mapStyle, setMapStyle] = useState('default');
+  const [fareEstimate, setFareEstimate] = useState(null);
 
   const [pickupCoords, setPickupCoords] = useState(null);
   const [dropoffCoords, setDropoffCoords] = useState(null);
 
+  const [zones, setZones] = useState([]);
+  const [pickupSuggestions, setPickupSuggestions] = useState([]);
+  const [dropoffSuggestions, setDropoffSuggestions] = useState([]);
+  const [showPickupList, setShowPickupList] = useState(false);
+  const [showDropoffList, setShowDropoffList] = useState(false);
+  const pickupRef = useRef(null);
+  const dropoffRef = useRef(null);
+
+  useEffect(() => {
+    getZoneList().then(r => {
+      const list = Array.isArray(r.data) ? r.data : [];
+      setZones(list.map(z => z.pickup_zone || z).filter(Boolean).sort());
+    }).catch(() => {});
+  }, []);
+
+  // Smart zone filter: prioritize starts-with, then includes
+  const filterZones = (query, limit = 10) => {
+    if (!query) return zones.slice(0, limit);
+    const q = query.toLowerCase();
+    const startsWith = zones.filter(z => z.toLowerCase().startsWith(q));
+    const includes = zones.filter(z => !z.toLowerCase().startsWith(q) && z.toLowerCase().includes(q));
+    return [...startsWith, ...includes].slice(0, limit);
+  };
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (pickupRef.current && !pickupRef.current.contains(e.target)) setShowPickupList(false);
+      if (dropoffRef.current && !dropoffRef.current.contains(e.target)) setShowDropoffList(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Check for pending route from Corridor Dashboard
+  useEffect(() => {
+    const pending = localStorage.getItem("pendingRoute");
+    if (pending) {
+      const { pickup, dropoff } = JSON.parse(pending);
+      setPickupLocation(pickup);
+      setDropoffLocation(dropoff);
+      localStorage.setItem("isAutoTracking", "true");
+      localStorage.removeItem("pendingRoute");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (pickupLocation && dropoffLocation && !routeInfo && !loading) {
+       // Only auto-trigger if we just came from the dashboard
+       const wasPending = !localStorage.getItem("pendingRoute"); 
+       if (wasPending) analyzeRoute();
+    }
+  }, [pickupLocation, dropoffLocation]);
+
   async function geocodeLocation(locationName) {
+    // 1. Try exact match from internal coordinates
+    if (NYC_ZONE_COORDS[locationName]) {
+      const c = NYC_ZONE_COORDS[locationName];
+      return { lat: c[0], lng: c[1] };
+    }
+
+    // 2. Try fuzzy match (if the zone name is part of our internal keys)
+    const fuzzyKey = Object.keys(NYC_ZONE_COORDS).find(k => 
+      k.toLowerCase().includes(locationName.toLowerCase()) || 
+      locationName.toLowerCase().includes(k.toLowerCase())
+    );
+    if (fuzzyKey) {
+      const c = NYC_ZONE_COORDS[fuzzyKey];
+      return { lat: c[0], lng: c[1] };
+    }
+
+    // 3. Fallback to external Nominatim API
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationName)}&format=json&limit=1`,
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationName + ", New York City")}&format=json&limit=1`,
       {
         headers: {
           "Accept-Language": "en",
@@ -135,6 +209,29 @@ export default function TrafficMap() {
       
       const coords = data.geometry.map(([lng, lat]) => [lat, lng]);
       setRouteGeometry(coords);
+
+      // Fetch fare estimate for this route
+      const now2 = new Date();
+      const jsDay = now2.getDay();
+      estimatePrice({
+        trip_distance: distanceKm * 0.621371, // km to miles
+        pickup_hour: now2.getHours(),
+        pickup_weekday: jsDay === 0 ? 6 : jsDay - 1,
+        pickup_month: now2.getMonth() + 1,
+        pickup_is_manhattan: 1,
+        dropoff_is_manhattan: 1,
+        pickup_is_airport: 0,
+        dropoff_is_airport: 0,
+        corridor_volatility: 0.15
+      }).then(r => setFareEstimate(r.data)).catch(() => {});
+      
+      // Automatically start ride if this was a jump from the dashboard
+      if (localStorage.getItem("isAutoTracking") === "true") {
+        setRideStarted(true);
+        setCurrentStep(0);
+        setTaxiPosition(coords[0]);
+        localStorage.removeItem("isAutoTracking");
+      }
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to fetch route data.');
@@ -240,10 +337,24 @@ export default function TrafficMap() {
                   zoom={12}
                   style={{ height: "500px", width: "100%", zIndex: 0 }}
                 >
+                  {/* Map Style Toggle */}
+                  <div style={{ position: "absolute", top: "12px", left: "12px", zIndex: 1000, display: "flex", gap: "4px", background: "rgba(255,255,255,0.92)", padding: "4px", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
+                    {[{id:'default',label:'🗺️',title:'Default'},{id:'satellite',label:'🛰️',title:'Satellite'},{id:'street',label:'🏙️',title:'Street'}].map(s => (
+                      <button key={s.id} onClick={() => setMapStyle(s.id)} title={s.title} style={{
+                        padding: "5px 9px", borderRadius: "7px", fontSize: "14px", border: "none", cursor: "pointer",
+                        background: mapStyle === s.id ? "#003580" : "transparent", transition: "all 0.2s"
+                      }}>{s.label}</button>
+                    ))}
+                  </div>
                   <TileLayer
-                    url={darkMode 
-                      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                    url={
+                      mapStyle === 'satellite'
+                        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                        : mapStyle === 'street'
+                        ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                        : darkMode
+                        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                     }
                     attribution='&copy; OpenStreetMap contributors &copy; CARTO'
                   />
@@ -306,7 +417,7 @@ export default function TrafficMap() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-              <div>
+              <div ref={pickupRef} style={{ position: "relative" }}>
                 <label style={{ fontSize: "12px", fontWeight: "700", color: darkMode ? "#9CA3AF" : "#6B7280", marginBottom: "8px", display: "block" }}>
                   Where are you?
                 </label>
@@ -314,15 +425,40 @@ export default function TrafficMap() {
                   type="text" 
                   placeholder="Where are you starting from?"
                   value={pickupLocation} 
-                  onChange={e => setPickupLocation(e.target.value)} 
+                  onChange={e => {
+                    setPickupLocation(e.target.value);
+                    setPickupSuggestions(filterZones(e.target.value));
+                    setShowPickupList(true);
+                  }}
+                  onFocus={() => {
+                    setPickupSuggestions(filterZones(pickupLocation));
+                    setShowPickupList(true);
+                  }}
                   style={{
                     width: "100%", padding: "12px 16px", borderRadius: "12px",
                     background: darkMode ? "#374151" : "#F3F4F6", border: "none",
                     color: darkMode ? "#F9FAFB" : "#111827", fontSize: "14px", fontWeight: "600"
                   }}
                 />
+                {showPickupList && pickupSuggestions.length > 0 && (
+                  <div style={{
+                    position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999,
+                    background: darkMode ? "#1F2937" : "white", borderRadius: "12px",
+                    boxShadow: "0 10px 25px rgba(0,0,0,0.15)", border: darkMode ? "1px solid #374151" : "1px solid #E5E7EB",
+                    maxHeight: "220px", overflowY: "auto", marginTop: "4px"
+                  }}>
+                    {pickupSuggestions.map(z => (
+                      <div key={z} onMouseDown={() => { setPickupLocation(z); setShowPickupList(false); }}
+                        style={{ padding: "10px 16px", cursor: "pointer", fontSize: "14px", fontWeight: "600",
+                          color: darkMode ? "#F9FAFB" : "#111827", borderBottom: darkMode ? "1px solid #374151" : "1px solid #F3F4F6" }}
+                        onMouseEnter={e => e.currentTarget.style.background = darkMode ? "#374151" : "#F3F4F6"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >📍 {z}</div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div>
+              <div ref={dropoffRef} style={{ position: "relative" }}>
                 <label style={{ fontSize: "12px", fontWeight: "700", color: darkMode ? "#9CA3AF" : "#6B7280", marginBottom: "8px", display: "block" }}>
                   Where to?
                 </label>
@@ -330,13 +466,38 @@ export default function TrafficMap() {
                   type="text" 
                   placeholder="Where are you going?"
                   value={dropoffLocation} 
-                  onChange={e => setDropoffLocation(e.target.value)} 
+                  onChange={e => {
+                    setDropoffLocation(e.target.value);
+                    setDropoffSuggestions(filterZones(e.target.value));
+                    setShowDropoffList(true);
+                  }}
+                  onFocus={() => {
+                    setDropoffSuggestions(filterZones(dropoffLocation));
+                    setShowDropoffList(true);
+                  }}
                   style={{
                     width: "100%", padding: "12px 16px", borderRadius: "12px",
                     background: darkMode ? "#374151" : "#F3F4F6", border: "none",
                     color: darkMode ? "#F9FAFB" : "#111827", fontSize: "14px", fontWeight: "600"
                   }}
                 />
+                {showDropoffList && dropoffSuggestions.length > 0 && (
+                  <div style={{
+                    position: "absolute", top: "100%", left: 0, right: 0, zIndex: 9999,
+                    background: darkMode ? "#1F2937" : "white", borderRadius: "12px",
+                    boxShadow: "0 10px 25px rgba(0,0,0,0.15)", border: darkMode ? "1px solid #374151" : "1px solid #E5E7EB",
+                    maxHeight: "220px", overflowY: "auto", marginTop: "4px"
+                  }}>
+                    {dropoffSuggestions.map(z => (
+                      <div key={z} onMouseDown={() => { setDropoffLocation(z); setShowDropoffList(false); }}
+                        style={{ padding: "10px 16px", cursor: "pointer", fontSize: "14px", fontWeight: "600",
+                          color: darkMode ? "#F9FAFB" : "#111827", borderBottom: darkMode ? "1px solid #374151" : "1px solid #F3F4F6" }}
+                        onMouseEnter={e => e.currentTarget.style.background = darkMode ? "#374151" : "#F3F4F6"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >🏁 {z}</div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             
@@ -367,6 +528,35 @@ export default function TrafficMap() {
               <p style={{ color: "#10B981", fontWeight: "700", textAlign: "center", margin: 0 }}>
                 ✅ Your ride has started! Taxi moves every 10 seconds.
               </p>
+            )}
+
+            {/* Fare Estimate Card */}
+            {fareEstimate && (
+              <div style={{
+                background: 'linear-gradient(135deg, #003580, #1e40af)',
+                borderRadius: '16px', padding: '20px 24px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                flexWrap: 'wrap', gap: '16px'
+              }}>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: '800', color: '#93C5FD', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                    💰 Estimated Fare
+                  </div>
+                  <div style={{ fontSize: '32px', fontWeight: '900', color: '#FFB800' }}>
+                    ${fareEstimate.expected_price}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#93C5FD', fontWeight: '600', marginTop: '2px' }}>
+                    Range: ${fareEstimate.price_band_min} — ${fareEstimate.price_band_max}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                  {fareEstimate.price_drivers?.slice(0,2).map((d, i) => (
+                    <span key={i} style={{ fontSize: '11px', fontWeight: '700', color: '#BFDBFE', background: '#ffffff15', padding: '4px 10px', borderRadius: '20px' }}>
+                      ⚡ {d}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
             
             {rideCompleted && (
