@@ -1,31 +1,63 @@
-# 🚕 TaxiIQ — Taxi Intelligence & Decision Support System
+# TaxiIQ — NYC Taxi Intelligence Platform
 
-**Authors:** Surbhi Agarwal · Triveni Reddy  
-**Stack:** Python · FastAPI · React · Recharts · scikit-learn
+<div align="center">
+
+**Built by [Surbhi Agarwal](https://github.com/SurbhiAgarwal1) & Triveni Reddy**
+
+![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green?style=flat-square&logo=fastapi)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-orange?style=flat-square&logo=scikit-learn)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
+
+*A full-stack taxi intelligence platform powered by 550,000+ real NYC taxi trips*
+
+</div>
 
 ---
 
-## 📌 What This Project Does
+## What is TaxiIQ?
 
-Unlike a basic taxi prediction notebook, **TaxiIQ** is a full decision-support platform with:
+TaxiIQ is a production-grade decision support system built on real NYC Yellow + Green taxi data (2025–2026). It combines machine learning, live routing, spatial analytics, and a modern React dashboard to give riders, analysts, and operators actionable insights on fares, routes, and zone demand.
+
+---
+
+## Features
 
 | Feature | Description |
 |---|---|
-| 🧠 Clustering Intel | K-Means layer: zone demand, corridor reliability, and time-based patterns |
-| ⏱ ETA Prediction | P50–P90 interval, confidence score, delay risk with intelligence insights |
-| 💵 Price Bands | Min–max fare range with explainable drivers |
-| 📍 Nearby Price Finder | Enter zone + budget → see cheapest nearby zones |
-| 🛣 Corridor Intelligence | Route reliability, volatility, delay detection |
-| 🗺 Zone Heatmap | Spatial view of price, speed, demand, volatility |
-| 📊 Model Monitoring | MAE, RMSE, R² across 3 ML models |
+| **Live Route Tracker** | Real-time routing via OSRM with animated taxi simulation and instant fare estimate |
+| **Fare Estimator** | ML ensemble (RF + GBM + LR) price prediction with confidence bands and price drivers |
+| **Budget Finder** | Find cheaper pickup zones within 1km walking distance, sorted by fare |
+| **Zone Heatmap** | Spatial activity map — trip volume, avg price, avg speed per zone |
+| **Route Overview** | Corridor-level analytics — speed, delay ratio, reliability classification |
+| **Admin Panel** | User management, model metrics, feedback records, system health monitoring |
+| **Weather Widget** | Live NYC weather with animated rain/snow/sun effects |
+| **Rush Hour Alert** | Real-time rush hour detection with countdown timer |
+| **Map Style Toggle** | Switch between Default, Satellite, and Street map views |
+| **Zone Autocomplete** | Smart search across all 241 NYC taxi zones |
 
 ---
 
+## Authors
 
-## ⚡ Quick Start (3 Steps)
+| Name | Role |
+|---|---|
+| **Surbhi Agarwal** | Full-stack development, ML pipeline, frontend, backend, deployment |
+| **Triveni Reddy** | Data analysis, EDA, model evaluation, documentation |
 
-### Step 1 — Backend Setup
+---
 
+## Quick Start
+
+### Windows (One Click)
+```bat
+start_windows.bat
+```
+
+### Manual Setup
+
+**Step 1 — Backend**
 ```bash
 cd backend
 python -m venv .venv
@@ -35,170 +67,196 @@ python -m venv .venv
 # Mac/Linux
 source .venv/bin/activate
 
-pip install -r requirements.txt
+pip install -r ../requirements.txt
+uvicorn main:app --reload
 ```
+Backend runs at → `http://localhost:8000`  
+Swagger docs → `http://localhost:8000/docs`
 
-### Step 2 — Download Data & Train Models
-
-```bash
-# From project root
-python backend/full_pipeline.py
-python backend/train_clustering.py
-```
-
-This will:
-- Download NYC Yellow Taxi 2025 & 2026 data
-- Clean and engineer features
-- Generate 17 EDA plots → `data/plots/`
-- Train LinearRegression, RandomForest, GradientBoosting
-- Save models to `models_saved/`
-- Build zone + corridor analytics tables
-- **(New)** Train K-Means clustering models for zone & corridor intelligence
-
-⏳ Takes ~5–15 minutes depending on internet speed.
-
-### Step 3 — Run the App
-
-**Terminal 1 — Backend:**
-```bash
-cd backend
-uvicorn app.main:app --reload
-# → http://localhost:8000
-# → Swagger docs: http://localhost:8000/docs
-```
-
-**Terminal 2 — Frontend:**
+**Step 2 — Frontend**
 ```bash
 cd frontend
 npm install
 npm run dev
-# → http://localhost:5173
 ```
+Frontend runs at → `http://localhost:5173`
+
+**Step 3 — Run Pipeline (first time only)**
+```bash
+python backend/full_pipeline.py
+```
+Downloads NYC TLC data, cleans it, trains models, builds analytics tables.  
+Takes ~5–15 minutes depending on internet speed.
 
 ---
 
-## 🗂 Project Structure
+## Project Structure
 
 ```
-taxi_project/
+TaxiIQ/
 ├── backend/
-│   └── full_pipeline.py         ← Run this first!
+│   ├── main.py                       # FastAPI app entry point
+│   ├── full_pipeline.py              # Data download + training pipeline
+│   ├── database.py                   # SQLAlchemy models (User, Feedback)
+│   ├── config.py                     # Environment config
+│   ├── routers/
+│   │   ├── predict.py                # ETA + price prediction APIs
+│   │   ├── analytics.py              # Zone, corridor, heatmap APIs
+│   │   ├── nearby.py                 # Budget finder API
+│   │   ├── auth.py                   # JWT authentication
+│   │   ├── feedback.py               # Trip feedback + retraining trigger
+│   │   ├── admin_ops.py              # Admin operations
+│   │   └── traffic.py                # Live routing via OSRM
+│   └── utils/
+│       └── coords.py                 # 241 NYC zone coordinates + Haversine
+├── frontend/
+│   └── src/
+│       ├── pages/
+│       │   ├── Dashboard.jsx         # Home — stats, weather, map, quick access
+│       │   ├── TrafficMap.jsx        # Live route tracker
+│       │   ├── PriceSimulator.jsx    # Fare estimator
+│       │   ├── NearbyPrice.jsx       # Budget finder
+│       │   ├── CorridorDashboard.jsx # Route overview
+│       │   ├── ZoneHeatmap.jsx       # Busy areas map
+│       │   ├── SubmitTrip.jsx        # Rate your trip
+│       │   └── Admin.jsx             # Admin panel
+│       ├── data/
+│       │   └── zoneCoords.js         # 241 zone coordinates (frontend)
+│       └── api/client.js             # Axios API client
 ├── data/
-│   ├── plots/                   ← 17 EDA plots (auto-generated)
-│   ├── taxi_clean.parquet       ← Cleaned dataset
-│   ├── zone_metrics.parquet     ← Zone analytics
-│   ├── corridor_metrics.parquet ← Corridor analytics
-│   └── zone_summary.parquet     ← For nearby price feature
+│   ├── taxi_clean.parquet            # Cleaned dataset (~550k trips)
+│   ├── zone_metrics.parquet          # Zone-level analytics
+│   ├── corridor_metrics.parquet      # Corridor-level analytics
+│   └── zone_summary.parquet          # Budget finder data
 ├── models_saved/
 │   ├── RandomForest.pkl
 │   ├── GradientBoosting.pkl
 │   ├── LinearRegression.pkl
-│   ├── metrics.json
-│   └── features.json
-├── backend/
-│   ├── app/
-│   │   ├── main.py
-│   │   └── routers/
-│   │       ├── predict.py       ← ETA + Price APIs
-│   │       ├── analytics.py     ← Zone/Corridor/Heatmap APIs
-│   │       └── nearby.py        ← Nearby Price feature
-│   └── requirements.txt
-└── frontend/
-    └── src/
-        ├── pages/
-        │   ├── Dashboard.jsx
-        │   ├── ETASimulator.jsx
-        │   ├── PriceSimulator.jsx
-        │   ├── NearbyPrice.jsx     ← Key new feature
-        │   ├── CorridorDashboard.jsx
-        │   └── ZoneHeatmap.jsx
-        └── api/client.js
+│   ├── kmeans_zone.pkl
+│   ├── kmeans_corr.pkl
+│   └── metrics.json
+└── requirements.txt
 ```
 
 ---
 
-## 🔌 API Endpoints
+## API Reference
 
+### Prediction
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/api/predict-eta` | ETA + interval + confidence + risk |
-| POST | `/api/estimate-price` | Price band + drivers + spike |
-| GET | `/api/nearby-price?zone=Midtown&budget=30` | Cheapest nearby zones |
-| GET | `/api/zone-stats` | Zone-level analytics |
-| GET | `/api/corridor-stats` | Corridor-level analytics |
-| GET | `/api/heatmap-data?metric=avg_price` | Heatmap data |
-| GET | `/api/eda-summary` | Dataset summary stats |
-| GET | `/api/model-metrics` | ML model performance |
-| GET | `/api/zone-list` | All zones for autocomplete |
+| `POST` | `/api/predict-eta` | ETA with P50/P90 interval, confidence score, delay risk |
+| `POST` | `/api/estimate-price` | Fare band with price drivers and spike detection |
+| `GET` | `/api/model-metrics` | MAE, RMSE, R² for all 3 models |
+
+### Analytics
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/zone-stats` | Zone metrics filtered by borough/hour |
+| `GET` | `/api/corridor-stats` | Corridor metrics filtered by hour |
+| `GET` | `/api/heatmap-data` | Zone heatmap by metric |
+| `GET` | `/api/eda-summary` | Dataset summary statistics |
+| `GET` | `/api/zone-map-data` | Zone data with lat/lng for map rendering |
+| `GET` | `/api/cluster-insights` | K-Means cluster labels |
+
+### Nearby / Budget Finder
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/nearby-price?zone=Astoria` | Zones within 1km sorted by walking distance + fare |
+| `GET` | `/api/zone-list` | All 241 zones for autocomplete |
+
+### Auth & Admin
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/signup` | Register new user (role: user) |
+| `POST` | `/api/auth/login` | Login, returns JWT token |
+| `GET` | `/api/admin/users` | List all users (admin only) |
+| `POST` | `/api/admin/promote-user` | Promote user to admin role |
+| `POST` | `/api/admin/demote-user` | Demote admin to user role |
+| `GET` | `/api/admin/system-stats` | System health + model version |
+| `GET` | `/api/admin/feedback-list` | All trip feedback records |
 
 ---
 
-## 📊 EDA Plots Generated
+## Machine Learning
 
-01. Trip Duration Distribution  
-02. Speed Distribution  
-03. Duration by Hour of Day  
-04. Demand by Hour  
-05. Weekend vs Weekday Duration  
-06. Average Duration by Borough  
-07. Top 10 Pickup Zones  
-08. Top 10 Delay-Prone Zones  
-09. Top 10 Slowest Corridors  
-10. Most Unstable Corridors  
-11. Price vs Distance  
-12. Price / Expected Ratio  
-13. Price by Traffic Level  
-14. Delay vs Traffic Level  
-15. Duration Variability by Hour  
-16. Model Residuals  
-17. Feature Importances  
+### Models
+
+| Model | Role | Parameters |
+|---|---|---|
+| Linear Regression | Baseline ETA | — |
+| Random Forest | Primary ETA predictor | 100 trees, max_depth=10 |
+| Gradient Boosting | Secondary ETA predictor | 100 estimators |
+| K-Means (Zone) | Zone demand clustering | 4 clusters |
+| K-Means (Corridor) | Corridor reliability | 3 clusters |
+
+**Ensemble weights:** RF × 0.5 + GBM × 0.4 + LR × 0.1
+
+### Features Used
+```
+trip_distance, pickup_hour, pickup_weekday, is_weekend, is_rush_hour,
+pickup_is_manhattan, dropoff_is_manhattan, pickup_is_airport,
+dropoff_is_airport, is_yellow, pickup_month, speed
+```
+
+### Cluster Labels
+
+**Zone Clusters**
+- `0` — High Demand Hub
+- `1` — Slow / High Congestion
+- `2` — Premium / Long Distance
+- `3` — Standard / Residential
+
+**Corridor Clusters**
+- `0` — Reliable / Fast
+- `1` — Highly Volatile
+- `2` — Congested Corridor
 
 ---
 
-## 🧠 ML Models
+## Authentication & Admin
 
-| Model | Description |
+- All users sign up via `/signup` — role defaults to `user`
+- Admin access is granted by an existing admin via the Admin Panel → Users tab
+- Admins cannot be created via signup — must be promoted by another admin
+- Default admin: `admin` / `TaxiIQ@2026`
+
+---
+
+## Data
+
+| Property | Value |
 |---|---|
-| Linear Regression | Baseline |
-| Random Forest | 150 trees, depth 12 |
-| Gradient Boosting | 150 estimators, lr=0.1 |
-| K-Means | Intelligence Layer (Zone, Corridor, Time segments) |
-
-**Features used:**
-`trip_distance`, `pickup_hour`, `pickup_weekday`, `is_weekend`,
-`is_rush_hour`, `pickup_is_manhattan`, `dropoff_is_manhattan`,
-`pickup_is_airport`, `dropoff_is_airport`, `congestion_factor`,
-`corridor_volatility`, `pickup_month`, `speed`
-
-**Prediction output:**
-- ETA P50 (median estimate)
-- ETA P90 (worst-case estimate)  
-- Confidence score (0–1)
-- Delay risk: Low / Medium / High
+| Source | NYC TLC Trip Record Data (official) |
+| Coverage | Yellow + Green taxi, Jan 2025 – Feb 2026 |
+| Raw trips | ~700k |
+| After cleaning | ~550k |
+| NYC Zones | 241 with precise coordinates |
+| Features engineered | 12 ML features + 6 analytics metrics |
 
 ---
 
-## 📍 Nearby Price Feature (Highlighted)
+## Tech Stack
 
-Navigate to **📍 Nearby Price** in the dashboard:
-
-1. Type any NYC zone name (autocomplete supported)
-2. Optionally enter a max budget in USD
-3. Optionally set hour of travel
-4. Click **Find Cheapest Nearby Zones**
-
-The system returns:
-- Your zone's current avg price, duration, price band, delay
-- Cheapest zones in the same borough (ranked)
-- Savings vs your current zone
-- Cheapest zones citywide
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.10+, FastAPI, SQLAlchemy, SQLite |
+| ML | scikit-learn, pandas, numpy, joblib |
+| Frontend | React 18, Vite, Tailwind CSS |
+| Maps | Leaflet, react-leaflet |
+| Charts | Recharts |
+| Auth | JWT (PyJWT) |
+| Routing | OSRM (Open Source Routing Machine) |
+| Weather | Open-Meteo API (no key required) |
 
 ---
 
-## 🚀 Future Extensions
+## License
 
-- Real-time traffic feed integration
-- Quantile regression for improved intervals
-- Automated retraining pipeline
-- User authentication + saved routes
-- Live monitoring alerts
+MIT — free to use, modify, and distribute.
+
+---
+
+<div align="center">
+Made with dedication by <strong>Surbhi Agarwal</strong> & <strong>Triveni Reddy</strong>
+</div>
