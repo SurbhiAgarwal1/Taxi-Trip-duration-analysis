@@ -6,4 +6,8 @@ node_modules/
 frontend/node_modules/
 *.log
 *.zip
-models_saved/
+
+# Large raw data files - not needed on Render
+data/yellow_tripdata_*.parquet
+data/green_tripdata_*.parquet
+data/taxi_clean.parquet

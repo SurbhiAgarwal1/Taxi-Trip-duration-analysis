@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: taxiiq-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r ../requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./taxi_iq.db
+      - key: ADMIN_API_KEY
+        value: supersecretadmin
+    disk:
+      name: taxiiq-data
+      mountPath: /opt/render/project/src/models_saved
+      sizeGB: 1
