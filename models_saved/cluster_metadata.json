@@ -1,0 +1,13 @@
+{
+  "zone_clusters": {
+    "0": "High Demand Hub",
+    "1": "Slow / High Congestion",
+    "2": "Premium / Long Distance",
+    "3": "Standard / Residential"
+  },
+  "corridor_clusters": {
+    "0": "Reliable / Fast",
+    "1": "Highly Volatile",
+    "2": "Congested Corridor"
+  }
+}

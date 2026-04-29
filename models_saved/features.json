@@ -1,0 +1,1 @@
+["trip_distance", "pickup_hour", "pickup_weekday", "is_weekend", "is_rush_hour", "pickup_is_manhattan", "dropoff_is_manhattan", "pickup_is_airport", "dropoff_is_airport", "is_yellow", "pickup_month", "speed", "congestion_factor", "corridor_volatility"]
