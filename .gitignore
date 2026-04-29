@@ -6,5 +6,4 @@ node_modules/
 frontend/node_modules/
 *.log
 *.zip
-models_saved/
 *.db

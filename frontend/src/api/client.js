@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/api' })
+const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api' })
 
 export const predictETA      = (data) => api.post('/predict-eta', data)
 export const estimatePrice   = (data) => api.post('/estimate-price', data)
