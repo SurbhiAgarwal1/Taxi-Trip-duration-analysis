@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://taxiiq-backend.onrender.com/api/$1" },
-    { "source": "/traffic/(.*)", "destination": "https://taxiiq-backend.onrender.com/traffic/$1" },
+    { "source": "/api/(.*)", "destination": "https://taxi-trip-duration-analysis.onrender.com/api/$1" },
+    { "source": "/traffic/(.*)", "destination": "https://taxi-trip-duration-analysis.onrender.com/traffic/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
