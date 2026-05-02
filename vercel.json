@@ -2,8 +2,8 @@
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://taxi-trip-duration-analysis.onrender.com/api/$1" },
-    { "source": "/traffic/(.*)", "destination": "https://taxi-trip-duration-analysis.onrender.com/traffic/$1" },
+    { "source": "/api/:path*", "destination": "https://taxi-trip-duration-analysis.onrender.com/api/:path*" },
+    { "source": "/traffic/:path*", "destination": "https://taxi-trip-duration-analysis.onrender.com/traffic/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
