@@ -59,7 +59,8 @@ export default function RateYourTrip() {
     setError('')
     
     const now = new Date()
-    const dropoff = new Date(now.getTime() + (parseFloat(duration) || 10) * 60000)
+    const durationMins = parseFloat(distance) * 3 || 15
+    const dropoff = new Date(now.getTime() + durationMins * 60000)
 
     const payload = {
       user_name: user?.username || 'Guest',
@@ -70,15 +71,21 @@ export default function RateYourTrip() {
       pickup_time: now.toISOString(),
       dropoff_time: dropoff.toISOString(),
       price: parseFloat(actualPrice),
-      trip_distance: parseFloat(distance) || 0,
-      rating: rating
+      trip_distance: parseFloat(distance) || 0
     }
 
     try {
-      await submitTripFeedbackExtended(payload)
+      console.log('Submitting payload:', payload)
+      const response = await Promise.race([
+        submitTripFeedbackExtended(payload),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), 8000))
+      ])
+      console.log('Submit response:', response)
       setSuccess(true)
     } catch (err) {
-      setError('Failed to submit feedback. Please try again.')
+      console.error('Submit error:', err)
+      const errorMsg = err.response?.data?.detail || err.message || 'Unknown error'
+      setError(`Failed: ${errorMsg}`)
     } finally {
       setLoading(false)
     }

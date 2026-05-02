@@ -8,11 +8,11 @@ def check_admin():
     try:
         admin = db.query(User).filter(User.username == "admin").first()
         if admin:
-            print(f"✅ Admin found: {admin.username} ({admin.role})")
+            print(f"Admin found: {admin.username} ({admin.role})")
         else:
-            print("❌ Admin NOT found.")
+            print("Admin NOT found.")
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
     finally:
         db.close()
 

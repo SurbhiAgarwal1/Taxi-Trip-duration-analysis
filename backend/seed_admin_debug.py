@@ -21,11 +21,11 @@ def seed_admin():
             )
             db.add(new_admin)
             db.commit()
-            print("✅ Admin created!")
+            print("Admin created!")
         else:
-            print("✅ Admin already exists.")
+            print("Admin already exists.")
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         import traceback
         traceback.print_exc()
     finally:

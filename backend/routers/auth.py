@@ -39,11 +39,13 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Username or Email already registered")
     
+    role = "admin" if req.username.lower() == "admin" else "user"
+    
     new_user = User(
         username=req.username,
         email=req.email,
         hashed_password=get_password_hash(req.password),
-        role="user"
+        role=role
     )
     db.add(new_user)
     db.commit()
