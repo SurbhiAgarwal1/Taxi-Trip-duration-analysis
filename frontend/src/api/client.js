@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api', timeout: 10000 })
+const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'https://taxi-trip-duration-analysis.onrender.com/api', timeout: 10000 })
 
 export const predictETA      = (data) => api.post('/predict-eta', data)
 export const estimatePrice   = (data) => api.post('/estimate-price', data)
@@ -19,7 +19,7 @@ export const signup          = (data) => api.post('/auth/signup', data)
 
 // Extended Feedback
 export const submitTripFeedbackExtended = (data) => api.post('/submit-trip-extended', data)
-export const fetchLiveTraffic = (params) => axios.get('/traffic/live', { params })
+export const fetchLiveTraffic = (params) => axios.get('https://taxi-trip-duration-analysis.onrender.com/traffic/live', { params })
 
 // Admin
 const ADMIN_KEY = 'supersecretadmin'
