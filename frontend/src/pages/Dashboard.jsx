@@ -49,9 +49,10 @@ export default function Home() {
 
   useEffect(() => {
     getEDASummary().then(r => setSummary(r.data)).catch(() => {})
-    getZoneMapData().then(r => setMapData(r.data || [])).catch(() => {})
+    getZoneMapData().then(r => setMapData(Array.isArray(r.data) ? r.data : [])).catch(() => {})
     getZoneStats({ hour: currentHour }).then(r => {
-      const sorted = (r.data || []).sort((a,b) => (b.trip_count||0) - (a.trip_count||0))
+      const data = Array.isArray(r.data) ? r.data : []
+      const sorted = data.sort((a,b) => (b.trip_count||0) - (a.trip_count||0))
       setTopZones(sorted.slice(0, 5))
     }).catch(() => {})
 
@@ -87,14 +88,17 @@ export default function Home() {
     // Fetch trip counts for all 24 hours
     Promise.all(
       Array.from({length: 24}, (_, h) =>
-        getZoneStats({ hour: h }).then(r => ({
-          hour: h,
-          label: h === 0 ? '12a' : h < 12 ? `${h}a` : h === 12 ? '12p' : `${h-12}p`,
-          trips: (r.data || []).reduce((sum, z) => sum + (z.trip_count || 0), 0),
-          avg_price: (r.data || []).length > 0
-            ? (r.data.reduce((sum, z) => sum + (z.avg_price || 0), 0) / r.data.length)
-            : 0
-        })).catch(() => ({ hour: h, label: `${h}`, trips: 0, avg_price: 0 }))
+        getZoneStats({ hour: h }).then(r => {
+          const data = Array.isArray(r.data) ? r.data : []
+          return {
+            hour: h,
+            label: h === 0 ? '12a' : h < 12 ? `${h}a` : h === 12 ? '12p' : `${h-12}p`,
+            trips: data.reduce((sum, z) => sum + (z.trip_count || 0), 0),
+            avg_price: data.length > 0
+              ? (data.reduce((sum, z) => sum + (z.avg_price || 0), 0) / data.length)
+              : 0
+          }
+        }).catch(() => ({ hour: h, label: `${h}`, trips: 0, avg_price: 0 }))
       )
     ).then(data => setHourlyData(data))
   }, [])
