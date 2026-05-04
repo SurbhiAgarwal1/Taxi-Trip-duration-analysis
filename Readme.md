@@ -1,7 +1,8 @@
 # 🚕 TaxiIQ — Taxi Intelligence & Decision Support System
 
 **Authors:** Surbhi Agarwal · Triveni Reddy  
-**Stack:** Python · FastAPI · React · Recharts · scikit-learn
+**Stack:** Python · FastAPI · React · Recharts · scikit-learn  
+**Live Demo:** [https://taxi-trip-duration-analysis.vercel.app/](https://taxi-trip-duration-analysis.vercel.app/)
 
 ---
 
@@ -62,7 +63,7 @@ This will:
 **Terminal 1 — Backend:**
 ```bash
 cd backend
-uvicorn app.main:app --reload
+uvicorn main:app --reload
 # → http://localhost:8000
 # → Swagger docs: http://localhost:8000/docs
 ```

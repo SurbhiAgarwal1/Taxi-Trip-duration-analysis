@@ -2,10 +2,11 @@ from fastapi import APIRouter, Query
 import pandas as pd, numpy as np, json
 from pathlib import Path
 
+from utils.paths import get_data_dir, get_model_dir
+
 router = APIRouter()
-BASE = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = BASE / "data"
-MODEL_DIR = BASE / "models_saved"
+DATA_DIR = get_data_dir()
+MODEL_DIR = get_model_dir()
 
 def load_clusters():
     p = MODEL_DIR / "cluster_metadata.json"
@@ -91,7 +92,17 @@ def heatmap_data(metric: str = Query("avg_price")):
 def eda_summary():
     df = load_parquet("taxi_clean.parquet")
     if df.empty:
-        return {"error": "Run training script first"}
+        return {
+            "total_trips": 0,
+            "avg_duration_min": 0.0,
+            "avg_distance_miles": 0.0,
+            "avg_price_usd": 0.0,
+            "avg_speed_mph": 0.0,
+            "rush_hour_pct": 0.0,
+            "price_spike_pct": 0.0,
+            "top_borough": "N/A",
+            "plots_available": []
+        }
     return {
         "total_trips": int(len(df)),
         "avg_duration_min": round(float(df["trip_duration"].mean()), 2),

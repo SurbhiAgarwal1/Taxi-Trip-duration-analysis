@@ -9,9 +9,10 @@ from pathlib import Path
 import pandas as pd, numpy as np, json
 from utils.coords import get_coords, calculate_distance
 
+from utils.paths import get_data_dir
+
 router = APIRouter()
-BASE = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = BASE / "data"
+DATA_DIR = get_data_dir()
 
 
 def load_zone_summary():

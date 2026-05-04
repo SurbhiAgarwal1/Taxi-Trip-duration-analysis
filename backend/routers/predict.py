@@ -4,10 +4,10 @@ from typing import Optional
 import numpy as np, joblib, json
 from pathlib import Path
 
-router = APIRouter()
+from utils.paths import get_model_dir
 
-BASE = Path(__file__).parent.parent.parent
-MODEL_DIR = BASE / "models_saved"
+router = APIRouter()
+MODEL_DIR = get_model_dir()
 
 # Load best model at startup
 try:

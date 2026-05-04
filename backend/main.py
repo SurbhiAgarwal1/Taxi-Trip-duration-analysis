@@ -1,6 +1,12 @@
+import sys, os
+from pathlib import Path
+# Add backend and root to path
+BASE_DIR = Path(__file__).resolve().parent
+sys.path.append(str(BASE_DIR))
+sys.path.append(str(BASE_DIR.parent))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# 
 from routers import predict, analytics, nearby, admin_ops, feedback, auth, traffic
 app = FastAPI(
     title="Taxi Intelligence API",
