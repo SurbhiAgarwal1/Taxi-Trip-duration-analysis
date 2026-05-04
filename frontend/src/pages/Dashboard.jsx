@@ -108,12 +108,12 @@ export default function Home() {
   const maxVal = mapData.length > 0 ? Math.max(...mapData.map(d => d[mapMetric] || 0)) : 1
 
   const stats = summary ? [
-    { label: 'Avg Trip Time',  value: summary.avg_duration_min + ' min', color: '#0ea5e9' },
-    { label: 'Avg Speed',      value: summary.avg_speed_mph + ' mph',    color: '#f59e0b' },
-    { label: 'Rush Hour Load', value: summary.rush_hour_pct + '%',       color: '#ef4444' },
-    { label: 'Trips Analyzed', value: (summary.total_trips/1000).toFixed(1)+'k', color: '#10b981' },
-    { label: 'Avg Fare',       value: '$'+summary.avg_price_usd,         color: '#8b5cf6' },
-    { label: 'Price Spikes',   value: summary.price_spike_pct + '%',     color: '#f97316' },
+    { label: 'Avg Trip Time',  value: (summary.avg_duration_min || 0) + ' min', color: '#0ea5e9' },
+    { label: 'Avg Speed',      value: (summary.avg_speed_mph || 0) + ' mph',    color: '#f59e0b' },
+    { label: 'Rush Hour Load', value: (summary.rush_hour_pct || 0) + '%',       color: '#ef4444' },
+    { label: 'Trips Analyzed', value: ((summary.total_trips || 0)/1000).toFixed(1)+'k', color: '#10b981' },
+    { label: 'Avg Fare',       value: '$'+(summary.avg_price_usd || 0),         color: '#8b5cf6' },
+    { label: 'Price Spikes',   value: (summary.price_spike_pct || 0) + '%',     color: '#f97316' },
   ] : []
 
   const quickActions = [

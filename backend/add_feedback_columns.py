@@ -11,7 +11,8 @@ def migrate():
         ("drop_location", "VARCHAR"),
         ("pickup_time", "TIMESTAMP"),
         ("dropoff_time", "TIMESTAMP"),
-        ("trip_duration", "FLOAT")
+        ("trip_duration", "FLOAT"),
+        ("rating", "INTEGER")
     ]
     
     with engine.connect() as conn:

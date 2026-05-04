@@ -53,7 +53,7 @@ class FeedbackRecord(Base):
     trip_duration = Column(Float, nullable=True) # Calculated duration in minutes
 
     feedback_hash = Column(String, unique=True, index=True) # deduplication
-
+    rating = Column(Integer, nullable=True) # User rating (1-5)
 
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 

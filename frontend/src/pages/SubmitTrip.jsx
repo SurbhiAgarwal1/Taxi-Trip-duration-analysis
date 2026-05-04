@@ -59,7 +59,9 @@ export default function RateYourTrip() {
     setError('')
     
     const now = new Date()
-    const dropoff = new Date(now.getTime() + (parseFloat(duration) || 10) * 60000)
+    // Estimate 2 minutes per km, or default to 15 minutes if distance is missing
+    const estimatedMinutes = (parseFloat(distance) * 2) || 15
+    const dropoff = new Date(now.getTime() + estimatedMinutes * 60000)
 
     const payload = {
       user_name: user?.username || 'Guest',

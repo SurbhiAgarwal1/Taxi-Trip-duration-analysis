@@ -34,7 +34,10 @@ export default function RouteOverview() {
 
   const parseRoute = (c) => {
     if (c.route) {
-      const parts = c.route.split('→').map(s => s.trim());
+      // Handle both standard -> and special → arrows
+      const parts = c.route.includes('→') 
+        ? c.route.split('→').map(s => s.trim())
+        : c.route.split('->').map(s => s.trim());
       return { pickup: parts[0] || 'N/A', dropoff: parts[1] || 'N/A' };
     }
     return { pickup: 'N/A', dropoff: 'N/A' };

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { getModelMetrics, adminGetUsers, adminGetStats, adminPromoteUser, adminDemoteUser, adminGetFeedback } from '../api/client'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { useAuth } from '../context/AuthContext'
 
 const PRIMARY = '#FFB800'
@@ -24,17 +23,31 @@ export default function Admin() {
 
   const loadAll = async () => {
     setLoading(true)
+    
+    // Load each section independently so one failure doesn't block the others
     try {
-      const [u, s, m, f] = await Promise.all([
-        adminGetUsers(), adminGetStats(), getModelMetrics(), adminGetFeedback()
-      ])
+      const u = await adminGetUsers()
       setUsers(u.data || [])
+    } catch { console.error("Failed to load users") }
+
+    try {
+      const s = await adminGetStats()
       setStats(s.data || null)
+    } catch { console.error("Failed to load stats") }
+
+    try {
+      const m = await getModelMetrics()
       setMetrics(m.data || null)
+    } catch { console.error("Failed to load metrics") }
+
+    try {
+      const f = await adminGetFeedback()
       setFeedback(Array.isArray(f.data) ? f.data : [])
-    } catch (e) {
-      flash('Failed to load admin data. Check backend.')
+    } catch { 
+      console.error("Failed to load feedback")
+      flash('Partial data load. Some admin features may be limited.')
     }
+    
     setLoading(false)
   }
 
@@ -198,57 +211,42 @@ export default function Admin() {
 
       {/* Models Tab */}
       {!loading && tab === 'models' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-          <div style={{ background: 'white', borderRadius: '20px', border: '1px solid #E5E7EB', padding: '24px' }}>
-            <h2 style={{ fontWeight: '800', fontSize: '16px', marginBottom: '20px' }}>MAE / RMSE</h2>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={modelData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                <XAxis dataKey="name" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="mae" name="MAE (min)" fill="#10B981" radius={[4,4,0,0]} />
-                <Bar dataKey="rmse" name="RMSE (min)" fill="#EF4444" radius={[4,4,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        <div style={{ background: 'white', borderRadius: '20px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+          <div style={{ padding: '24px', borderBottom: '1px solid #E5E7EB' }}>
+            <h2 style={{ margin: 0, fontWeight: '800', fontSize: '18px' }}>Model Performance Metrics</h2>
+            <p style={{ color: '#6B7280', margin: '4px 0 0', fontSize: '13px', fontWeight: '600' }}>Live accuracy scores for the current prediction system.</p>
           </div>
-          <div style={{ background: 'white', borderRadius: '20px', border: '1px solid #E5E7EB', padding: '24px' }}>
-            <h2 style={{ fontWeight: '800', fontSize: '16px', marginBottom: '20px' }}>R² Score</h2>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={modelData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                <XAxis dataKey="name" stroke="#9CA3AF" />
-                <YAxis domain={[0,1]} stroke="#9CA3AF" />
-                <Tooltip />
-                <Bar dataKey="r2" name="R² Value" fill="#3B82F6" radius={[4,4,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div style={{ gridColumn: '1/-1', background: 'white', borderRadius: '20px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#F9FAFB' }}>
-                  {['Model', 'R² Accuracy', 'MAE', 'RMSE', 'Status'].map(h => (
-                    <th key={h} style={{ padding: '12px 20px', textAlign: 'left', fontSize: '11px', fontWeight: '900', color: '#9CA3AF', textTransform: 'uppercase' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {modelData.map(m => (
-                  <tr key={m.name} style={{ borderTop: '1px solid #F3F4F6' }}>
-                    <td style={{ padding: '14px 20px', fontWeight: '800' }}>{m.name}</td>
-                    <td style={{ padding: '14px 20px', color: '#3B82F6', fontWeight: '800' }}>{(m.r2 * 100).toFixed(1)}%</td>
-                    <td style={{ padding: '14px 20px', color: '#10B981', fontWeight: '700' }}>{m.mae} min</td>
-                    <td style={{ padding: '14px 20px', color: '#EF4444', fontWeight: '700' }}>{m.rmse} min</td>
-                    <td style={{ padding: '14px 20px' }}>
-                      <span style={{ padding: '4px 10px', background: '#ECFDF5', color: '#059669', borderRadius: '20px', fontSize: '11px', fontWeight: '900' }}>ACTIVE</span>
-                    </td>
-                  </tr>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#F9FAFB' }}>
+                {['Prediction Model', 'R² Accuracy', 'Mean Absolute Error (MAE)', 'RMSE', 'Status'].map(h => (
+                  <th key={h} style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '900', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '1px' }}>{h}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody>
+              {modelData.map(m => (
+                <tr key={m.name} style={{ borderTop: '1px solid #F3F4F6' }}>
+                  <td style={{ padding: '20px 24px', fontWeight: '800', fontSize: '15px' }}>{m.name}</td>
+                  <td style={{ padding: '20px 24px' }}>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#3B82F6' }}>{(m.r2 * 100).toFixed(1)}%</div>
+                  </td>
+                  <td style={{ padding: '20px 24px' }}>
+                    <div style={{ fontSize: '16px', fontWeight: '800', color: '#10B981' }}>{m.mae} min</div>
+                  </td>
+                  <td style={{ padding: '20px 24px' }}>
+                    <div style={{ fontSize: '16px', fontWeight: '800', color: '#EF4444' }}>{m.rmse} min</div>
+                  </td>
+                  <td style={{ padding: '20px 24px' }}>
+                    <span style={{ padding: '6px 14px', background: '#ECFDF5', color: '#059669', borderRadius: '20px', fontSize: '11px', fontWeight: '900', border: '1px solid #6EE7B7' }}>ACTIVE ENGINE</span>
+                  </td>
+                </tr>
+              ))}
+              {modelData.length === 0 && (
+                <tr><td colSpan={5} style={{ padding: '60px', textAlign: 'center', color: '#9CA3AF', fontWeight: '700' }}>No model data available. Run training script.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 

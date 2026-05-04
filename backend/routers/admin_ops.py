@@ -37,7 +37,11 @@ def system_stats(db: Session = Depends(get_db), x_api_key: str = Header(None)):
     verify_admin_key(x_api_key)
     
     total_feedback = db.query(FeedbackRecord).count()
-    avg_error = db.query(func.avg(FeedbackRecord.prediction_error)).scalar() or 0.0
+    
+    # Safely calculate average error
+    err_query = db.query(func.avg(FeedbackRecord.prediction_error)).filter(FeedbackRecord.prediction_error.isnot(None)).scalar()
+    avg_error = round(float(err_query), 2) if err_query is not None else 0.0
+    
     total_users = db.query(User).count()
     
     # recent drift reports
@@ -57,7 +61,7 @@ def system_stats(db: Session = Depends(get_db), x_api_key: str = Header(None)):
         "active_model_version": model_manager.current_version,
         "total_feedback_records": total_feedback,
         "total_users": total_users,
-        "average_error_minutes": round(float(avg_error), 2),
+        "average_error_minutes": avg_error,
         "registry": registry,
         "recent_drifts": [d.feature_name + " (" + d.severity + ")" for d in recent_drifts]
     }
@@ -104,6 +108,7 @@ def demote_user(payload: dict, db: Session = Depends(get_db), x_api_key: str = H
     user.role = "user"
     db.commit()
     return {"status": "success", "message": f"{username} demoted to user"}
+@router.post("/rollback-model")
 def rollback_model():
     registry_path = MODEL_DIR / "version_registry.json"
     if not registry_path.exists():

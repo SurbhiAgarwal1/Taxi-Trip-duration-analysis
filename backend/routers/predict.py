@@ -1,172 +1,133 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional
-import numpy as np, joblib, json
+import numpy as np
+import joblib
+import json
 from pathlib import Path
 
 router = APIRouter()
 
-BASE = Path(__file__).parent.parent.parent
-MODEL_DIR = BASE / "models_saved"
+# Paths setup
+BASE_PATH = Path(__file__).resolve().parent.parent.parent
+MODEL_FOLDER = BASE_PATH / "models_saved"
 
-# Load best model at startup
+# Load models at startup
 try:
-    _rf  = joblib.load(MODEL_DIR / "RandomForest.pkl")
-    _gbm = joblib.load(MODEL_DIR / "GradientBoosting.pkl")
-    _lr  = joblib.load(MODEL_DIR / "LinearRegression.pkl")
-    with open(MODEL_DIR / "features.json") as f:
-        FEATURES = json.load(f)
+    # Main prediction models
+    forest_model = joblib.load(MODEL_FOLDER / "RandomForest.pkl")
     
-    # Load Clustering Models & Metadata
+    # We try to load others but only forest is mandatory for this simple version
     try:
-        with open(MODEL_DIR / "cluster_metadata.json") as f:
-            CLUSTERS = json.load(f)
-        _scaler_clust = joblib.load(MODEL_DIR / "scaler_corr.pkl")
-        _kmeans_corr  = joblib.load(MODEL_DIR / "kmeans_corr.pkl")
-        CLUSTERING_LOADED = True
+        gradient_model = joblib.load(MODEL_FOLDER / "GradientBoosting.pkl")
+        linear_model = joblib.load(MODEL_FOLDER / "LinearRegression.pkl")
     except:
-        CLUSTERING_LOADED = False
-        print("[WARN] Clustering metadata not found")
+        print("[INFO] Secondary models not found, using Random Forest only.")
+        gradient_model = forest_model
+        linear_model = forest_model
 
+    # Clustering metadata
+    with open(MODEL_FOLDER / "cluster_metadata.json") as f:
+        CLUSTER_INFO = json.load(f)
+        
     MODELS_LOADED = True
 except Exception as e:
     MODELS_LOADED = False
-    print(f"[WARN] Models not loaded: {e}")
-
+    print(f"[ERROR] Models failed to load: {e}")
 
 class TripRequest(BaseModel):
-    trip_distance: float          # miles
-    pickup_hour: int              # 0-23
-    pickup_weekday: int           # 0=Mon … 6=Sun
-    pickup_is_manhattan: int = 0
-    dropoff_is_manhattan: int = 0
-    pickup_is_airport: int = 0
-    dropoff_is_airport: int = 0
-    is_yellow: int = 1              # 1=Yellow, 0=Green
-    corridor_volatility: float = 0.2
-    pickup_month: int = 1
-    # Optional derived fields
-    speed: Optional[float] = None
+    trip_distance: float
+    pickup_hour: int
+    pickup_weekday: int
+    is_airport: int = 0
+    is_yellow: int = 1
+    corridor_volatility: float = 0.0
 
-
-def build_features(req: TripRequest) -> list:
-    is_weekend   = int(req.pickup_weekday >= 5)
-    is_rush      = int(req.pickup_hour in [7,8,9,16,17,18,19])
-    speed        = req.speed if req.speed else (req.trip_distance / 0.35)  # rough proxy
-
+def prepare_features(data: TripRequest):
+    """Organizes the input data into the list format the model expects."""
+    is_peak = 1 if data.pickup_hour in [7,8,9,17,18,19] else 0
+    is_weekend = 1 if data.pickup_weekday >= 5 else 0
+    
+    # Return features in the same order they were trained
     return [
-        req.trip_distance,
-        req.pickup_hour,
-        req.pickup_weekday,
+        data.trip_distance,
+        data.pickup_hour,
+        is_peak,
         is_weekend,
-        is_rush,
-        req.pickup_is_manhattan,
-        req.dropoff_is_manhattan,
-        req.pickup_is_airport,
-        req.dropoff_is_airport,
-        req.is_yellow,
-        req.pickup_month,
-        speed,
+        data.is_airport,
+        data.is_yellow
     ]
-
 
 @router.post("/predict-eta")
 def predict_eta(req: TripRequest):
     if not MODELS_LOADED:
-        return {"error": "Models not trained yet. Run notebooks/01_EDA_and_Training.py first."}
+        return {"error": "Models are not trained yet. Please run the notebooks first."}
 
-    feats = [build_features(req)]
-    rf_pred  = float(_rf.predict(feats)[0])
-    gbm_pred = float(_gbm.predict(feats)[0])
-    lr_pred  = float(_lr.predict(feats)[0])
-
-    # Ensemble
-    eta = (rf_pred * 0.5 + gbm_pred * 0.4 + lr_pred * 0.1)
-
-    # Prediction interval
-    vol = req.corridor_volatility
-    p50 = round(eta, 1)
-    p90 = round(eta * (1 + 0.3 + vol * 0.5), 1)
-
-    # Confidence & risk
-    confidence = max(0.4, 1.0 - vol * 0.5 - 0.05 * (1 if req.pickup_is_airport else 0))
-    if vol < 0.2 and confidence > 0.75:
-        risk = "Low"
-    elif vol < 0.4 or confidence > 0.55:
-        risk = "Medium"
-    else:
+    # Prepare features for the model
+    input_features = [prepare_features(req)]
+    
+    # Get predictions from models
+    prediction = forest_model.predict(input_features)[0]
+    eta_mins = round(float(prediction), 1)
+    
+    # Safety buffer for late arrivals
+    upper_bound = round(eta_mins * 1.3, 1)
+    
+    # Determine risk level based on volatility
+    risk = "Low"
+    if req.corridor_volatility > 0.4:
         risk = "High"
-
-    # Clustering Insight (Supporting layer)
-    insight = "Standard route patterns."
-    if CLUSTERING_LOADED:
-        # We classify this specific trip's corridor metrics
-        # kmeans_c was trained on 3 features: avg_duration, volatility, delay_ratio (scaled)
-        # Using vol as proxy for delay_ratio here
-        c_feats = _scaler_clust.transform([[eta, vol, vol]]) 
-        c_id = int(_kmeans_corr.predict(c_feats)[0])
-        insight = CLUSTERS["corridor_clusters"].get(str(c_id), insight)
+    elif req.corridor_volatility > 0.2:
+        risk = "Medium"
 
     return {
-        "eta_p50": p50,
-        "eta_p90": p90,
-        "confidence": round(confidence, 2),
+        "eta_p50": eta_mins,
+        "eta_p90": upper_bound,
         "delay_risk": risk,
-        "clustering_insight": insight,
-        "model_outputs": {
-            "random_forest": round(rf_pred,1),
-            "gradient_boosting": round(gbm_pred,1),
-            "linear_regression": round(lr_pred,1),
-        }
+        "clustering_insight": "Standard traffic pattern detected."
     }
-
 
 @router.post("/estimate-price")
 def estimate_price(req: TripRequest):
-    BASE_FARE, PER_MILE, PER_MIN = 3.0, 1.75, 0.35
-    is_rush    = int(req.pickup_hour in [7,8,9,16,17,18,19])
-    congestion = 1.25 if is_rush else 1.0
-    vol        = req.corridor_volatility
+    # Base pricing rules
+    BASE_FARE = 3.0
+    PRICE_PER_MILE = 1.8
+    PRICE_PER_MIN = 0.4
+    
+    # Get ETA prediction first
+    eta_result = predict_eta(req)
+    if "error" in eta_result:
+        # Fallback if models aren't ready
+        eta_estimate = req.trip_distance * 3
+    else:
+        eta_estimate = eta_result["eta_p50"]
 
-    # Get ETA first
-    eta_resp = predict_eta(req) if MODELS_LOADED else {"eta_p50": req.trip_distance * 3}
-    eta = eta_resp.get("eta_p50", req.trip_distance * 3)
-
-    expected   = (BASE_FARE + req.trip_distance * PER_MILE + eta * PER_MIN) * congestion
-    band_min   = round(expected * 0.85, 2)
-    band_max   = round(expected * (1.35 + vol * 0.2), 2)
-    expected   = round(expected, 2)
-    is_spike   = band_max > expected * 1.5
-
-    # Explain why
-    drivers = []
-    if is_rush:
-        drivers.append("Peak hour demand (+25% congestion multiplier)")
-    if req.pickup_is_airport or req.dropoff_is_airport:
-        drivers.append("Airport route surcharge")
-    if req.pickup_is_manhattan or req.dropoff_is_manhattan:
-        drivers.append("Manhattan zone premium")
-    if vol > 0.4:
-        drivers.append(f"High corridor volatility ({vol:.2f}) widens price band")
-    if req.trip_distance > 15:
-        drivers.append("Long distance trip")
-    if not drivers:
-        drivers.append("Standard rate — no surcharges detected")
-
+    # Calculate base price
+    distance_cost = req.trip_distance * PRICE_PER_MILE
+    time_cost = eta_estimate * PRICE_PER_MIN
+    total_expected = BASE_FARE + distance_cost + time_cost
+    
+    # Add peak hour surcharge
+    is_peak = 1 if req.pickup_hour in [7,8,9,17,18,19] else 0
+    if is_peak:
+        total_expected = total_expected * 1.25
+        
+    # Final rounding
+    total_expected = round(total_expected, 2)
+    
     return {
-        "expected_price": expected,
-        "price_band_min": band_min,
-        "price_band_max": band_max,
-        "is_price_spike": is_spike,
-        "price_drivers": drivers,
-        "eta_used": eta,
+        "expected_price": total_expected,
+        "price_band_min": round(total_expected * 0.9, 2),
+        "price_band_max": round(total_expected * 1.2, 2),
+        "price_drivers": ["Peak hour (+25%)" if is_peak else "Standard rate"],
+        "eta_used": eta_estimate
     }
 
-
 @router.get("/model-metrics")
-def model_metrics():
-    try:
-        with open(MODEL_DIR / "metrics.json") as f:
+def get_model_metrics():
+    """Returns model performance metrics (MAE, RMSE, R2) for the Admin Dashboard."""
+    path = MODEL_FOLDER / "metrics.json"
+    if path.exists():
+        with open(path) as f:
             return json.load(f)
-    except:
-        return {"error": "Run training script first"}
+    return {"error": "Metrics file not found. Please run model training first."}

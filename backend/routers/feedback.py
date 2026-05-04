@@ -76,6 +76,7 @@ class TripFeedbackSubmit(BaseModel):
     dropoff_time: datetime
     price: float
     trip_distance: float = 0.0 # user can provide or we default
+    rating: int = 5 # default to 5 stars if not provided
 
     @field_validator('price')
     @classmethod
@@ -122,6 +123,7 @@ def submit_trip_extended(data: TripFeedbackSubmit, request: Request, background_
         trip_distance=data.trip_distance,
         pickup_hour=p_hour,
         pickup_weekday=p_weekday,
+        rating=data.rating,
         feedback_hash=f_hash
     )
     
