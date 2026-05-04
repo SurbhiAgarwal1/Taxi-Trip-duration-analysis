@@ -13,13 +13,22 @@ def get_data_dir():
     Returns the data directory. 
     Priority:
     1. /data (Render persistent disk)
-    2. PROJECT_ROOT/data (Local/Dev)
+    2. /opt/render/project/src/data (Absolute Render path)
+    3. PROJECT_ROOT/data (Local/Dev)
     """
     render_disk = Path("/data")
     if render_disk.exists() and (render_disk / "taxi_clean.parquet").exists():
         return render_disk
     
-    return PROJECT_ROOT / "data"
+    # Try absolute path on Render
+    abs_render_data = Path("/opt/render/project/src/data")
+    if abs_render_data.exists() and (abs_render_data / "taxi_clean.parquet").exists():
+        return abs_render_data
+
+    # Fallback to relative
+    dev_data = PROJECT_ROOT / "data"
+    print(f"[Paths] Data directory requested. Looking in: {render_disk}, {abs_render_data}, {dev_data}")
+    return dev_data
 
 def get_model_dir():
     """

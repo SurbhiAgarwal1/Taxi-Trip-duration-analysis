@@ -25,12 +25,8 @@ def load_parquet(name):
 @router.get("/zone-stats")
 def zone_stats(borough: str = Query(None), hour: int = Query(None)):
     df = load_parquet("zone_metrics.parquet")
-    if df.empty:
-        return {"error": "Run training script first"}
-    if borough:
-        df = df[df["pickup_borough"].str.lower() == borough.lower()]
-    if hour is not None:
-        df = df[df["pickup_hour"] == hour]
+    if df is None or df.empty:
+        return []
     
     agg = df.groupby("pickup_zone").agg(
         avg_duration=("avg_duration","mean"),
@@ -90,30 +86,44 @@ def heatmap_data(metric: str = Query("avg_price")):
 
 @router.get("/eda-summary")
 def eda_summary():
-    df = load_parquet("taxi_clean.parquet")
-    if df.empty:
+    try:
+        df = load_parquet("taxi_clean.parquet")
+        if df is None or df.empty:
+            return {
+                "total_trips": 0,
+                "avg_duration_min": 0,
+                "avg_distance_miles": 0,
+                "avg_price_usd": 0,
+                "avg_speed_mph": 0,
+                "rush_hour_pct": 0,
+                "price_spike_pct": 0,
+                "top_borough": "N/A",
+                "plots_available": []
+            }
+        return {
+            "total_trips": int(len(df)),
+            "avg_duration_min": round(float(df["trip_duration"].mean()), 2),
+            "avg_distance_miles": round(float(df["trip_distance"].mean()), 2),
+            "avg_price_usd": round(float(df["total_amount"].mean()), 2),
+            "avg_speed_mph": round(float(df["speed"].mean()), 2) if "speed" in df else 0,
+            "rush_hour_pct": round(float(df["is_rush_hour"].mean() * 100), 1) if "is_rush_hour" in df else 0,
+            "price_spike_pct": round(float(df["is_price_spike"].mean() * 100), 1) if "is_price_spike" in df else 0,
+            "top_borough": str(df["pickup_borough"].value_counts().index[0]) if "pickup_borough" in df else "Unknown",
+            "plots_available": [p.stem for p in (DATA_DIR / "plots").glob("*.png")]
+        }
+    except Exception as e:
+        print(f"Error in eda_summary: {e}")
         return {
             "total_trips": 0,
-            "avg_duration_min": 0.0,
-            "avg_distance_miles": 0.0,
-            "avg_price_usd": 0.0,
-            "avg_speed_mph": 0.0,
-            "rush_hour_pct": 0.0,
-            "price_spike_pct": 0.0,
+            "avg_duration_min": 0,
+            "avg_distance_miles": 0,
+            "avg_price_usd": 0,
+            "avg_speed_mph": 0,
+            "rush_hour_pct": 0,
+            "price_spike_pct": 0,
             "top_borough": "N/A",
             "plots_available": []
         }
-    return {
-        "total_trips": int(len(df)),
-        "avg_duration_min": round(float(df["trip_duration"].mean()), 2),
-        "avg_distance_miles": round(float(df["trip_distance"].mean()), 2),
-        "avg_price_usd": round(float(df["total_amount"].mean()), 2),
-        "avg_speed_mph": round(float(df["speed"].mean()), 2) if "speed" in df else 0.0,
-        "rush_hour_pct": round(float(df["is_rush_hour"].mean() * 100), 1) if "is_rush_hour" in df else 0.0,
-        "price_spike_pct": round(float(df["is_price_spike"].mean() * 100), 1) if "is_price_spike" in df else 0.0,
-        "top_borough": str(df["pickup_borough"].value_counts().index[0]) if "pickup_borough" in df else "Unknown",
-        "plots_available": [p.stem for p in (DATA_DIR / "plots").glob("*.png")]
-    }
 
 
 NYC_ZONE_COORDS = {
