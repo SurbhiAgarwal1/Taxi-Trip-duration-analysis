@@ -363,4 +363,8 @@ Full interactive documentation is available at `http://localhost:8000/docs` (Swa
 
 ---
 
+## Dashboard 
+<img width="1902" height="873" alt="image" src="https://github.com/user-attachments/assets/4aaa3bb6-d4ca-421e-9acb-30e5c2f987f3" />
+
+
 *Built by Surbhi Agarwal & Triveni Reddy | NYC Taxi Intelligence Platform*
