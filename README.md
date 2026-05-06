@@ -358,7 +358,6 @@ Full interactive documentation is available at `http://localhost:8000/docs` (Swa
 - [`Codebase_Technical_Documentation.md`](./Codebase_Technical_Documentation.md) — In-depth code architecture reference
 - [`Data_Analysis_Documentation.md`](./Data_Analysis_Documentation.md) — Feature engineering and EDA methodology
 - [`dashboard_explanation.md`](./dashboard_explanation.md) — Dashboard component breakdown
-- [`VIVA_PREPARATION.md`](./VIVA_PREPARATION.md) — Q&A prep for project presentations
 - [`Dataset_Exploration.ipynb`](./Dataset_Exploration.ipynb) — Jupyter notebook for dataset exploration
 
 ---
