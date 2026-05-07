@@ -1,6 +1,5 @@
  # 🚕 TaxiIQ — Taxi Intelligence & Decision Support System
-
-**Authors:** Surbhi Agarwal · Triveni Reddy  
+ 
 **Stack:** Python · FastAPI · React · Recharts · scikit-learn  
 **Dataset:** NYC Yellow Taxi Trip Data (2025–2026)
 
