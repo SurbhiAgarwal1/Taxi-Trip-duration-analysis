@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const api = axios.create({ 
   baseURL: import.meta.env.VITE_API_URL || '/api', 
-  timeout: 15000 
+  timeout: 60000 
 })
 
 export const predictETA      = (data) => api.post('/predict-eta', data)
@@ -22,7 +22,7 @@ export const signup          = (data) => api.post('/auth/signup', data)
 
 // Extended Feedback
 export const submitTripFeedbackExtended = (data) => api.post('/submit-trip-extended', data)
-export const fetchLiveTraffic = (params) => api.get('/traffic/live', { params })
+export const fetchLiveTraffic = (params) => axios.get('/traffic/live', { params })
 
 // Admin
 const ADMIN_KEY = 'supersecretadmin'

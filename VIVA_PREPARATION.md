@@ -477,3 +477,244 @@ Before using a connection from the pool, SQLAlchemy sends a lightweight `SELECT 
 ---
 
 *Good luck with your viva! — Surbhi Agarwal & Triveni Reddy*
+
+
+---
+
+## SECTION 9 — DATA SCIENCE CONCEPTS USED PER FEATURE
+
+### Feature 1: ETA Prediction (`/api/predict-eta`)
+
+**Data Science used:**
+- **Supervised Learning** — trained on labeled data (trip features → actual duration)
+- **Regression** — predicting a continuous number (minutes), not a category
+- **Ensemble Learning** — combining 3 models for better accuracy
+- **Feature Engineering** — creating `is_rush_hour`, `speed`, `is_weekend` from raw data
+- **Train-Test Split (80/20)** — evaluating model on unseen data
+- **Prediction Intervals (P50/P90)** — statistical confidence ranges
+
+**Models used:**
+| Model | Why |
+|---|---|
+| Linear Regression | Baseline — assumes linear relationship between features and duration |
+| Random Forest | 100 decision trees — handles non-linear patterns, robust to outliers |
+| Gradient Boosting | Sequential trees — each tree corrects errors of previous one |
+
+**Ensemble formula:**
+```
+ETA = RandomForest×0.5 + GradientBoosting×0.4 + LinearRegression×0.1
+```
+
+**Accuracy achieved:**
+- Random Forest R² = **0.9989 (99.89%)**
+- Gradient Boosting R² = **0.9950 (99.50%)**
+- Linear Regression R² = **0.8012 (80.12%)**
+
+---
+
+### Feature 2: Fare Estimation (`/api/estimate-price`)
+
+**Data Science used:**
+- **Rule-based pricing model** — uses NYC taxi rate structure
+- **ETA prediction as input** — fare depends on predicted trip duration
+- **Statistical bands** — min/max range based on corridor volatility
+- **Anomaly detection** — `is_price_spike` flag when fare > 1.5x route average
+
+**Formula:**
+```
+Base Fare = $3.00
+Per Mile  = $1.75
+Per Minute = $0.35
+Rush Hour Multiplier = 1.25x
+
+Expected = (3.0 + distance×1.75 + eta×0.35) × congestion
+Band Min  = Expected × 0.85
+Band Max  = Expected × (1.35 + volatility×0.2)
+```
+
+**Why volatility widens the band:**
+- High volatility corridor = unpredictable traffic = wider price range
+- Low volatility = consistent route = narrow, reliable price band
+
+---
+
+### Feature 3: Budget Finder / Nearby Price (`/api/nearby-price`)
+
+**Data Science used:**
+- **Geospatial Analysis** — calculating real-world distances between zones
+- **Haversine Formula** — accurate distance on Earth's curved surface
+- **Sorting & Filtering** — zones ranked by distance then price
+- **Aggregation** — avg_price per zone computed from 550k trips
+
+**Haversine Formula:**
+```python
+a = sin(Δlat/2)² + cos(lat1)×cos(lat2)×sin(Δlon/2)²
+distance = 2R × arcsin(√a)   # R = 6371 km
+```
+
+**Why Haversine not Euclidean?**
+- Euclidean distance treats Earth as flat — inaccurate for geographic coordinates
+- Haversine accounts for Earth's curvature — gives true km distance
+
+---
+
+### Feature 4: Zone Clustering (`/api/zone-stats` with cluster_name)
+
+**Data Science used:**
+- **Unsupervised Learning** — no labels, model finds patterns itself
+- **K-Means Clustering** — groups zones into K clusters by similarity
+- **StandardScaler** — normalizes features before clustering
+- **Elbow Method** — K=4 chosen for zones, K=3 for corridors
+
+**Features used for zone clustering:**
+```
+avg_duration, avg_price, avg_speed, trip_count, delay_ratio
+```
+
+**K-Means algorithm:**
+1. Randomly place K centroids
+2. Assign each zone to nearest centroid
+3. Move centroid to mean of its assigned zones
+4. Repeat until centroids stop moving
+
+**Zone cluster labels:**
+- `0` High Demand Hub — busy, high price
+- `1` Slow / High Congestion — slow speed, high delay
+- `2` Premium / Long Distance — expensive, far trips
+- `3` Standard / Residential — normal, predictable
+
+---
+
+### Feature 5: Corridor Analytics (`/api/corridor-stats`)
+
+**Data Science used:**
+- **Time Series Aggregation** — metrics grouped by hour of day
+- **Volatility Calculation** — `std(duration) / mean(duration)` per route
+- **K-Means Clustering (K=3)** — classifies corridors by reliability
+- **Delay Ratio** — `trip_duration / zone_avg_duration`
+
+**Corridor cluster labels:**
+- `0` Reliable / Fast — low volatility, fast speed
+- `1` Highly Volatile — unpredictable travel times
+- `2` Congested Corridor — slow, high delay ratio
+
+**Features used for corridor clustering:**
+```
+avg_duration, volatility, delay_ratio
+```
+
+---
+
+### Feature 6: Zone Heatmap (`/api/heatmap-data`)
+
+**Data Science used:**
+- **Spatial Data Visualization** — mapping numeric metrics to geographic zones
+- **Aggregation** — mean of avg_price/avg_speed/trip_count per zone
+- **Normalization for visualization** — circle radius proportional to value
+
+**Metrics available:**
+- `trip_count` — demand heatmap
+- `avg_price` — fare heatmap
+- `avg_speed` — congestion heatmap
+- `delay_ratio` — delay heatmap
+- `volatility` — unpredictability heatmap
+
+---
+
+### Feature 7: Data Cleaning Pipeline (`full_pipeline.py`)
+
+**Data Science used:**
+- **Outlier Removal** — IQR-based and domain-knowledge filters
+- **Feature Engineering** — creating new features from raw data
+- **Data Deduplication** — `drop_duplicates()`
+- **Missing Value Handling** — `dropna()` on critical columns
+- **Sampling** — 100k rows per file to manage memory
+
+**Cleaning rules applied:**
+| Rule | Reason |
+|---|---|
+| duration 1–120 min | Remove impossible trips |
+| distance 0.1–100 miles | Remove GPS errors |
+| speed < 80 mph | Remove data errors |
+| total_amount > 0 | Remove refunds/errors |
+| passenger_count > 0 | Remove empty trips |
+| No null location IDs | Can't assign zone |
+
+**Features engineered:**
+| Feature | Formula | Purpose |
+|---|---|---|
+| `trip_duration` | (dropoff - pickup) in minutes | Target variable |
+| `pickup_hour` | datetime.hour | Time of day effect |
+| `is_rush_hour` | hour in [7,8,9,16,17,18,19] | Rush hour flag |
+| `is_weekend` | weekday >= 5 | Weekend effect |
+| `speed` | distance / (duration/60) | Traffic proxy |
+| `corridor_volatility` | std/mean per route | Route reliability |
+| `delay_ratio` | duration / zone_avg | Relative delay |
+| `is_price_spike` | fare > 1.5x route avg | Surge detection |
+
+---
+
+### Feature 8: Authentication System
+
+**Data Science / Security used:**
+- **SHA-256 Hashing** — one-way hash for password storage
+- **JWT (JSON Web Token)** — stateless authentication
+- **Role-Based Access Control (RBAC)** — user vs admin roles
+
+**SHA-256:**
+- One-way function — cannot reverse the hash to get password
+- Same input always gives same output — used for verification
+- 256-bit output = 64 hex characters
+
+**JWT structure:**
+```
+Header.Payload.Signature
+eyJ... . eyJ... . abc123...
+
+Payload contains:
+{
+  "username": "surbhi",
+  "is_admin": false,
+  "exp": 1234567890
+}
+```
+
+---
+
+## SECTION 10 — EVALUATION METRICS EXPLAINED
+
+### MAE (Mean Absolute Error)
+```
+MAE = (1/n) × Σ|actual - predicted|
+```
+- Average absolute difference between predicted and actual values
+- In minutes: MAE=0.198 means predictions are off by ~12 seconds on average
+- **Lower is better**
+
+### RMSE (Root Mean Squared Error)
+```
+RMSE = √[(1/n) × Σ(actual - predicted)²]
+```
+- Squares the errors before averaging — penalizes large errors more
+- More sensitive to outliers than MAE
+- **Lower is better**
+
+### R² Score (Coefficient of Determination)
+```
+R² = 1 - (SS_residual / SS_total)
+```
+- Measures what proportion of variance in the target is explained by the model
+- R²=1.0 → perfect predictions
+- R²=0.0 → model is no better than predicting the mean
+- R²=0.9989 → model explains 99.89% of variance in trip duration
+- **Higher is better (max 1.0)**
+
+### Why Random Forest >> Linear Regression here?
+- Trip duration has **non-linear** relationships with features
+- Example: Rush hour + Airport + Manhattan together cause much bigger delay than each alone
+- Linear Regression can't capture these interactions
+- Random Forest splits data into decision trees that naturally handle non-linearity
+
+---
+
+*Surbhi Agarwal & Triveni Reddy*

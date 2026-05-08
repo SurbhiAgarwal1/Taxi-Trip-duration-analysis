@@ -9,15 +9,27 @@ from config import DATABASE_URL
 logger = logging.getLogger("DB_LAYER")
 logger.setLevel(logging.INFO)
 
-# PostgreSQL Engine configuration with pooling and safety
-engine = create_engine(
-    DATABASE_URL,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    pool_recycle=1800
-)
-logger.info("PostgreSQL engine initialized successfully.")
+# Engine configuration with pooling and safety
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        pool_pre_ping=True
+    )
+    logger.info("SQLite engine initialized.")
+else:
+    # Fix for Render/Heroku postgres:// URLs (SQLAlchemy 1.4+ requirement)
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        
+    engine = create_engine(
+        DATABASE_URL,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        pool_recycle=1800
+    )
+    logger.info("PostgreSQL engine initialized.")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -101,20 +113,12 @@ except Exception as e:
 
 def get_db():
     db = SessionLocal()
-    max_retries = 3
-    retry_count = 0
-    while retry_count < max_retries:
-        try:
-            # Test connection
-            db.execute(text("SELECT 1"))
-            yield db
-            break
-        except exc.OperationalError as e:
-            retry_count += 1
-            if retry_count == max_retries:
-                logger.error("Max retries reached. Database connection failed.")
-                raise e
-            logger.warning(f"Database connection transient failure, retrying ({retry_count}/{max_retries})...")
-            time.sleep(1)
-        finally:
-            db.close()
+    try:
+        # Verify connection health
+        db.execute(text("SELECT 1"))
+        yield db
+    except Exception as e:
+        logger.error(f"DB Connection Error: {e}")
+        raise
+    finally:
+        db.close()

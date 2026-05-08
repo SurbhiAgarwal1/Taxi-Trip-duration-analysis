@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import * as api from '../api/client'
 import { jwtDecode } from "jwt-decode";
 
-const AuthContext = createContext()
+export const AuthContext = createContext()
 
 export const useAuth = () => useContext(AuthContext)
 
@@ -33,7 +33,9 @@ export const AuthProvider = ({ children }) => {
         return { success: true }
       }
     } catch (err) {
-      return { success: false, error: err.response?.data?.detail || 'Login failed' }
+      const detail = err.response?.data?.detail;
+      const errorMsg = typeof detail === 'string' ? detail : (Array.isArray(detail) ? detail.map(d => d.msg).join(', ') : 'Login failed');
+      return { success: false, error: errorMsg }
     }
   }
 
@@ -47,7 +49,9 @@ export const AuthProvider = ({ children }) => {
         return { success: true }
       }
     } catch (err) {
-      return { success: false, error: err.response?.data?.detail || 'Signup failed' }
+      const detail = err.response?.data?.detail;
+      const errorMsg = typeof detail === 'string' ? detail : (Array.isArray(detail) ? detail.map(d => d.msg).join(', ') : 'Signup failed');
+      return { success: false, error: errorMsg }
     }
   }
 

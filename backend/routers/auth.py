@@ -47,9 +47,13 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
         hashed_password=get_password_hash(req.password),
         role=role
     )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error during signup: {str(e)}")
     
     token = create_access_token({"username": new_user.username, "is_admin": new_user.role == "admin"})
     return {"status": "success", "token": token, "user": {"username": new_user.username, "email": new_user.email, "role": new_user.role}}
