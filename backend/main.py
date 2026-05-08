@@ -35,4 +35,4 @@ app.include_router(traffic.router, prefix="/traffic", tags=["traffic"])
 
 @app.get("/")
 def root():
-    return {"message": "Taxi Intelligence API is running", "docs": "/docs"}
+    return {"message": "Taxi Intelligence API is running", "docs": "/docs", "version": "1.0.2-mountfix"}
