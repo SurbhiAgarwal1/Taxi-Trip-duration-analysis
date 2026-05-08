@@ -13,10 +13,10 @@ def get_data_dir():
     """
     Returns the data directory. 
     Priority:
-    1. /data (Render persistent disk)
-    2. BACKEND_DIR/data (New location inside backend)
+    1. /mnt/data (Render persistent disk)
+    2. BACKEND_DIR/data (Local repo data)
     """
-    render_disk = Path("/data")
+    render_disk = Path("/mnt/data")
     if render_disk.exists() and (render_disk / "taxi_clean.parquet").exists():
         return render_disk
     
@@ -31,14 +31,14 @@ def get_model_dir():
     """
     Returns the models directory.
     Priority:
-    1. /data/models_saved (Render persistent disk)
-    2. BACKEND_DIR/models_saved (New location inside backend)
+    1. /mnt/data/models_saved (Render persistent disk)
+    2. BACKEND_DIR/models_saved (Local repo models)
     """
-    render_disk_models = Path("/data/models_saved")
+    render_disk_models = Path("/mnt/data/models_saved")
     if render_disk_models.exists():
         return render_disk_models
     
-    render_disk = Path("/data")
+    render_disk = Path("/mnt/data")
     if render_disk.exists() and (render_disk / "RandomForest.pkl").exists():
         return render_disk
 
