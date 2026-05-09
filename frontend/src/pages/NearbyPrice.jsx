@@ -42,8 +42,10 @@ export default function PricesNearYou() {
   const { darkMode } = useTheme();
   const [pickupZone, setPickupZone] = useState("");
   const [dropoffZone, setDropoffZone] = useState("");
-  const [minBudget, setMinBudget] = useState("");
   const [maxBudget, setMaxBudget] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalText, setModalText] = useState("");
+  const [modalTitle, setModalTitle] = useState("Alert");
   const [autoFilled, setAutoFilled] = useState(false);
   const [zones, setZones] = useState([]);
 
@@ -106,6 +108,7 @@ export default function PricesNearYou() {
     const params = {
       zone: pickupZone,
       dropoff_zone: dropoffZone || undefined,
+      hour: new Date().getHours()
     }
 
     getNearbyPrice(params)
@@ -137,33 +140,70 @@ export default function PricesNearYou() {
             : (z.walking_distance_km || 999)
         }));
 
-        // Check if pickup zone itself is closest to drop location
-        let closestToDropMsg = null;
-        if (dropCoords && pickupCoords) {
-          const pickupToDrop = haversine(pickupCoords, dropCoords);
-          const nearbyWithDrop = enriched.map(z => ({
-            ...z,
-            distToDrop: haversine(NYC_ZONE_COORDS[z.pickup_zone] || pickupCoords, dropCoords)
-          }));
-          const closestAlt = nearbyWithDrop.sort((a,b) => a.distToDrop - b.distToDrop)[0];
-          if (!closestAlt || pickupToDrop <= (closestAlt?.distToDrop || 999)) {
-            closestToDropMsg = `Your pickup zone "${pickupZone}" is already the closest to "${dropoffZone}" (${pickupToDrop.toFixed(2)} km away).`;
+        // 3. Determine Filtered Results
+        let filtered = enriched;
+        let budgetMatchedExact = false;
+        let budgetTooLow = false;
+
+        if (maxBudget) {
+          const budgetVal = parseFloat(maxBudget);
+          const withinBudget = enriched.filter(z => (z.avg_price || 0) <= budgetVal + 0.01); // Allowance for precision
+          
+          if (withinBudget.length === 0) {
+            budgetTooLow = true;
+            filtered = sortedByDistance.slice(0, 5);
+            
+            // "Fix" it by auto-selecting the nearest
+            if (nearest) {
+              const coords = NYC_ZONE_COORDS[nearest.pickup_zone];
+              if (coords) {
+                setSelectedZone({
+                  lat: coords[0],
+                  lng: coords[1],
+                  name: nearest.pickup_zone,
+                  price: nearest.avg_price,
+                  walking_distance_km: nearest.walking_distance_km,
+                  isCurrent: false,
+                  isDrop: false
+                });
+              }
+            }
+          } else {
+            filtered = withinBudget.sort((a,b) => a.walking_distance_km - b.walking_distance_km);
+            // Check if the best result is an exact match to the budget
+            if (filtered[0] && Math.abs(filtered[0].avg_price - budgetVal) < 0.01) {
+              budgetMatchedExact = true;
+            }
           }
+        } else {
+          // If no budget, just show zones within 1km or top 5
+          filtered = enriched.filter(z => z.walking_distance_km <= 1);
+          if (filtered.length === 0) filtered = sortedByDistance.slice(0, 5);
         }
 
-        // Filter to zones within 1km of pickup
-        let filtered = enriched
-          .filter(z => z.walking_distance_km <= 1)
-          .sort((a,b) => a.walking_distance_km - b.walking_distance_km);
+        // 4. Final Modal Content Determination
+        let finalMsg = "";
+        let finalTitle = "Alert";
 
-        if (filtered.length === 0) filtered = enriched.sort((a,b) => a.walking_distance_km - b.walking_distance_km).slice(0,5);
+        const topZone = filtered[0] || nearest;
+        const topPrice = topZone?.avg_price || 0;
 
-        // Apply budget filters
-        if (minBudget) filtered = filtered.filter(z => (z.avg_price || 0) >= parseFloat(minBudget));
-        if (maxBudget) filtered = filtered.filter(z => (z.avg_price || 0) <= parseFloat(maxBudget));
-        if (filtered.length === 0) filtered = enriched.sort((a,b) => a.walking_distance_km - b.walking_distance_km).slice(0,5);
+        if (budgetTooLow) {
+          finalTitle = "Budget Alert";
+          finalMsg = `Your budget of $${maxBudget} is too low for any nearby zones. Showing the nearest available pickup point instead.`;
+        } else if (budgetMatchedExact || topPrice >= 50) {
+          finalTitle = "High Price Alert";
+          finalMsg = `This amount ($${topPrice.toFixed(2)}) is too much! You should check out the lower price alternatives available near you.`;
+        } else if (topPrice >= 20) {
+          finalTitle = "Price Alert";
+          finalMsg = `This price ($${topPrice.toFixed(2)}) is too much! You should check out the lower price options found below.`;
+        }
 
-        if (closestToDropMsg) setError(closestToDropMsg);
+        if (finalMsg) {
+          setModalTitle(finalTitle);
+          setModalText(finalMsg);
+          setModalOpen(true);
+        }
 
         setResults({ ...r.data, filtered_zones: filtered });
       })
@@ -257,12 +297,20 @@ export default function PricesNearYou() {
            <div style={{ 
               background: "#10B98122", color: "#10B981", padding: "6px 12px", 
               borderRadius: "12px", fontSize: "12px", fontWeight: "900",
-              letterSpacing: "0.5px"
-            }}>CHEAPER ALTERNATIVES</div>
+              letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: "6px"
+            }}>
+              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10B981", animation: "pulse 1.5s infinite" }}></div>
+              LIVE SYSTEM
+            </div>
         </div>
-        <p style={{ color: darkMode ? "#9CA3AF" : "#6B7280", fontWeight: "600", fontSize: "16px" }}>
-          Find cheaper pickup zones near you and see them on the map.
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+          <p style={{ color: darkMode ? "#9CA3AF" : "#6B7280", fontWeight: "600", fontSize: "16px", margin: 0 }}>
+            Find cheaper pickup zones near you based on real-time taxi intelligence.
+          </p>
+          <div style={{ fontSize: "11px", fontWeight: "800", color: "#94A3B8", background: darkMode ? "#111827" : "#F1F5F9", padding: "4px 10px", borderRadius: "8px" }}>
+            ⏱️ LAST DATA SYNC: {new Date().toLocaleTimeString()}
+          </div>
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px", alignItems: "start" }}>
@@ -360,27 +408,13 @@ export default function PricesNearYou() {
                 </div>
               )}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: "900", color: "#64748B", marginBottom: "10px", display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Min Budget ($)</label>
-                <input 
-                  type="number"
-                  value={minBudget} 
-                  onChange={e => setMinBudget(e.target.value)} 
-                  style={{
-                    width: "100%", padding: "16px", borderRadius: "14px",
-                    background: darkMode ? "#111827" : "#F8FAFC", 
-                    border: darkMode ? "1px solid #374151" : "1px solid #E2E8F0",
-                    color: darkMode ? "#F9FAFB" : "#111827", fontSize: "15px", fontWeight: "700"
-                  }}
-                />
-              </div>
-              <div>
+              <div style={{ gridColumn: "span 2" }}>
                 <label style={{ fontSize: "11px", fontWeight: "900", color: "#64748B", marginBottom: "10px", display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Max Budget ($)</label>
                 <input 
                   type="number"
                   value={maxBudget} 
                   onChange={e => setMaxBudget(e.target.value)} 
+                  placeholder="e.g. 25"
                   style={{
                     width: "100%", padding: "16px", borderRadius: "14px",
                     background: darkMode ? "#111827" : "#F8FAFC", 
@@ -389,7 +423,6 @@ export default function PricesNearYou() {
                   }}
                 />
               </div>
-            </div>
           </div>
 
           <button 
@@ -682,10 +715,50 @@ export default function PricesNearYou() {
         </div>
       )}
       
+      {/* Custom Alert Modal */}
+      {modalOpen && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center",
+          alignItems: "center", zIndex: 10000, backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            background: darkMode ? "#1F2937" : "white", padding: "40px",
+            borderRadius: "28px", maxWidth: "450px", width: "90%",
+            textAlign: "center", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
+            border: darkMode ? "1px solid #374151" : "1px solid #E2E8F0",
+            animation: "modalBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+          }}>
+            <div style={{ fontSize: "50px", marginBottom: "20px" }}>⚠️</div>
+            <h3 style={{ fontSize: "22px", fontWeight: "900", marginBottom: "16px", color: darkMode ? "#F9FAFB" : "#003580" }}>{modalTitle}</h3>
+            <p style={{ fontSize: "16px", color: darkMode ? "#9CA3AF" : "#64748B", lineHeight: "1.6", fontWeight: "600", marginBottom: "32px" }}>
+              {modalText}
+            </p>
+            <button 
+              onClick={() => setModalOpen(false)}
+              style={{
+                width: "100%", padding: "16px", borderRadius: "14px",
+                background: primaryColor, color: secondaryColor,
+                fontWeight: "900", border: "none", cursor: "pointer",
+                fontSize: "16px", transition: "all 0.2s"
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform = "scale(1.02)"}
+              onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+            >
+              GOT IT, THANKS!
+            </button>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .result-card:hover {
           transform: translateY(-5px);
           box-shadow: 0 15px 30px -10px rgba(0,0,0,0.1);
+        }
+        @keyframes modalBounce {
+          0% { transform: scale(0.8); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
         }
       `}</style>
     </div>
