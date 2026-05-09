@@ -179,20 +179,19 @@ This feature supports dynamic pricing management and helps passengers understand
 
 ### 📍 Nearby Price Finder (`NearbyPrice.jsx`)
 
-A key differentiating feature that helps users find cheaper pickup alternatives near their current location.
+A key differentiating feature that helps users find cheaper pickup alternatives near their current location with real-time budget intelligence.
 
 **How to use:**
 1. Type any NYC zone name — autocomplete is supported
 2. Optionally enter a maximum budget in USD
-3. Optionally set the intended hour of travel
-4. Click **Find Cheapest Nearby Zones**
+3. Click **Find Cheapest Nearby Zones**
 
-**Results returned:**
-- Your selected zone's current average price, typical duration, price band, and delay status
-- A ranked list of the cheapest alternative zones within the same borough with estimated savings vs. your zone
-- The cheapest zones available across the entire city
-
-This feature is particularly useful for budget-conscious riders and for fleet dispatchers looking to reposition vehicles efficiently.
+**Key Logic & Smart Alerts:**
+- **Live System Integration** — Passes current hour to backend for time-sensitive pricing
+- **Budget Auto-Fix** — If no zones match your budget, it automatically suggests the nearest available options
+- **Price Threshold Alerts** — Notifies users if prices are high (>$20) or "Too Much" (>$50)
+- **Visual Mapping** — See cheaper alternatives as interactive markers on the map
+- **Live Status Badge** — Pulse indicator showing real-time connectivity to the intelligence layer
 
 ---
 
