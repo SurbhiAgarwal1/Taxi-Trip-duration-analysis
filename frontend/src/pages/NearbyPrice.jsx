@@ -145,8 +145,10 @@ export default function PricesNearYou() {
         let budgetMatchedExact = false;
         let budgetTooLow = false;
 
-        if (maxBudget) {
-          const budgetVal = parseFloat(maxBudget);
+        const budgetVal = maxBudget ? parseFloat(maxBudget) : null;
+        const isInvalidBudget = maxBudget && isNaN(budgetVal);
+
+        if (maxBudget && !isInvalidBudget) {
           const withinBudget = enriched.filter(z => (z.avg_price || 0) <= budgetVal + 0.01); // Allowance for precision
           
           if (withinBudget.length === 0) {
