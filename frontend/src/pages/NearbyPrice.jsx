@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { getNearbyPrice, getZoneList } from '../api/client'
 import { useTheme } from '../context/ThemeContext'
-import { MapContainer, TileLayer, CircleMarker, Tooltip, Polyline, useMap, Marker } from "react-leaflet"
+import { MapContainer, TileLayer, CircleMarker, Tooltip, Polyline, useMap, Marker, Popup } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
 import NYC_ZONE_COORDS from '../data/zoneCoords'
@@ -141,6 +141,9 @@ export default function PricesNearYou() {
         }));
 
         // 3. Determine Filtered Results
+        const sortedByDistance = [...enriched].sort((a, b) => a.walking_distance_km - b.walking_distance_km);
+        const nearest = sortedByDistance[0];
+
         let filtered = enriched;
         let budgetMatchedExact = false;
         let budgetTooLow = false;
@@ -193,10 +196,10 @@ export default function PricesNearYou() {
         if (budgetTooLow) {
           finalTitle = "Budget Alert";
           finalMsg = `Your budget of $${maxBudget} is too low for any nearby zones. Showing the nearest available pickup point instead.`;
-        } else if (budgetMatchedExact || topPrice >= 50) {
+        } else if (topPrice >= 70) {
           finalTitle = "High Price Alert";
           finalMsg = `This amount ($${topPrice.toFixed(2)}) is too much! You should check out the lower price alternatives available near you.`;
-        } else if (topPrice >= 20) {
+        } else if (topPrice >= 35) {
           finalTitle = "Price Alert";
           finalMsg = `This price ($${topPrice.toFixed(2)}) is too much! You should check out the lower price options found below.`;
         }
@@ -226,13 +229,12 @@ export default function PricesNearYou() {
     return { min: Math.min(...prices), max: Math.max(...prices) };
   }, [results]);
 
-  const getMarkerColor = (price) => {
-    if (priceStats.max === priceStats.min) return "#10B981"; // Green
-    const ratio = (price - priceStats.min) / (priceStats.max - priceStats.min);
-    // Interpolate between Green (#10B981) and Red (#EF4444)
-    if (ratio < 0.3) return "#10B981"; // Cheap
-    if (ratio < 0.7) return "#F59E0B"; // Medium
-    return "#EF4444"; // Expensive
+  const getMarkerColor = (price, dist) => {
+    if (!price) return "#3B82F6"; // Current location
+    if (dist > 2.5) return "#EF4444"; // Red for FAR (user request)
+    if (price < 20) return "#10B981"; // Green for Cheap
+    if (price < 40) return "#F59E0B"; // Orange for Medium
+    return "#991B1B"; // Dark Red for Expensive but Nearby
   };
 
   const mapMarkers = useMemo(() => {
@@ -509,22 +511,35 @@ export default function PricesNearYou() {
                 <CircleMarker
                   key={i}
                   center={[m.lat, m.lng]}
-                  radius={selectedZone?.name === m.name ? 16 : 11}
+                  radius={selectedZone?.name === m.name ? 22 : (m.price < 20 ? 18 : 14)}
                   pathOptions={{ 
                     color: selectedZone?.name === m.name ? "#FFB800" : "#fff",
-                    fillColor: getMarkerColor(m.price), 
-                    fillOpacity: 0.95,
-                    weight: selectedZone?.name === m.name ? 3.5 : 2.5
+                    fillColor: getMarkerColor(m.price, m.walking_distance_km), 
+                    fillOpacity: m.walking_distance_km > 3 ? 0.5 : 0.9, 
+                    weight: selectedZone?.name === m.name ? 6 : 2
                   }}
                   eventHandlers={{
                     click: () => setSelectedZone(selectedZone?.name === m.name ? null : m),
                   }}
                 >
-                  <Tooltip direction="top" offset={[0, -10]} opacity={0.95}>
-                    <div style={{ fontWeight: "800", fontSize: "12px", whiteSpace: "nowrap" }}>{m.name}</div>
-                    <div style={{ fontWeight: "900", fontSize: "13px", color: getMarkerColor(m.price) }}>${m.price?.toFixed(2)} avg fare</div>
-                    <div style={{ fontSize: "11px", color: "#6B7280", marginTop: "2px" }}>Click to see path</div>
+                  <Tooltip direction="top" offset={[0, -10]} opacity={1} permanent={m.price < 35 && m.walking_distance_km < 2}>
+                    <div style={{ textAlign: "center", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))" }}>
+                      <div style={{ fontWeight: "900", fontSize: "11px", color: "#fff", textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}>${m.price?.toFixed(0)}</div>
+                      <div style={{ fontSize: "9px", color: "#fff", fontWeight: "700" }}>{m.walking_distance_km?.toFixed(1)}km</div>
+                    </div>
                   </Tooltip>
+                  <Popup>
+                    <div style={{ padding: "10px", minWidth: "160px", borderRadius: "12px" }}>
+                      <div style={{ fontWeight: "900", fontSize: "16px", marginBottom: "6px", color: secondaryColor }}>{m.name}</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                         <span style={{ color: getMarkerColor(m.price, m.walking_distance_km), fontWeight: "900", fontSize: "20px" }}>${m.price?.toFixed(2)}</span>
+                         <span style={{ fontSize: "12px", fontWeight: "800", color: "#64748B" }}>{m.walking_distance_km?.toFixed(2)} km</span>
+                      </div>
+                      <div style={{ marginTop: "10px", borderTop: "1px solid #f1f5f9", paddingTop: "8px", fontSize: "11px", color: "#94A3B8", fontWeight: "700" }}>
+                        Click result card for path analysis
+                      </div>
+                    </div>
+                  </Popup>
                 </CircleMarker>
               )
             ))}
