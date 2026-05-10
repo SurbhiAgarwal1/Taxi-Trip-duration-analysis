@@ -236,11 +236,18 @@ export default function PricesNearYou() {
   }, [results]);
 
   const getMarkerColor = (price, dist) => {
-    if (!price) return "#3B82F6"; // Current location
-    if (dist > 2.5) return "#EF4444"; // Red for FAR
-    if (price < 20) return "#10B981"; // Green for Cheap
-    if (price < 40) return "#F59E0B"; // Orange for Medium
-    return "#991B1B"; // Dark Red for Expensive but Nearby
+    if (!price) return "#3B82F6"; // Current location (Blue)
+    if (dist > 2.5) return "#EF4444"; // Distant zones (Red)
+    
+    if (!priceStats.min || priceStats.max === priceStats.min) return "#10B981";
+    
+    // Relative ranking for nearby zones
+    const range = priceStats.max - priceStats.min;
+    const ratio = (price - priceStats.min) / (range || 1);
+    
+    if (ratio <= 0.1) return "#10B981"; // Absolute Best (Green)
+    if (ratio <= 0.5) return "#F59E0B"; // Good (Orange)
+    return "#B91C1C"; // Least Good in Set (Maroon/Dark Red)
   };
 
   const getDotIcon = (color, size = 12) => {
@@ -574,15 +581,15 @@ export default function PricesNearYou() {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
               <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#10B981" }}></div>
-              <span>Cheapest</span>
+              <span>Best Value (Cheapest)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
               <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#F59E0B" }}></div>
-              <span>Medium</span>
+              <span>Good Value</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-              <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#EF4444" }}></div>
-              <span>Higher Price</span>
+              <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#B91C1C" }}></div>
+              <span>Higher Price / Distant</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div style={{ 
