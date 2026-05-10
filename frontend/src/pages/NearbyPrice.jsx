@@ -195,7 +195,7 @@ export default function PricesNearYou() {
 
         if (budgetTooLow) {
           finalTitle = "Budget Alert";
-          finalMsg = `Your budget of $${maxBudget} is too low for any nearby zones. Showing the cheapest options near you instead.`;
+          finalMsg = `This amount ($${maxBudget}) is too much! You should check out the lower price alternatives available near you.`;
         } else if (maxBudget && (budgetMatchedExact || budgetVal >= 50)) {
           // If the user enters a high budget, we show THEIR price as "too much"
           finalTitle = "Price Alert";
@@ -250,10 +250,10 @@ export default function PricesNearYou() {
     return "#B91C1C"; // Least Good in Set (Maroon/Dark Red)
   };
 
-  const getDotIcon = (color, size = 12) => {
+  const getDotIcon = (color, size = 10) => {
     return L.divIcon({
       className: 'custom-dot-icon',
-      html: `<div style="width: ${size}px; height: ${size}px; background-color: ${color}; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.3);"></div>`,
+      html: `<div style="width: ${size}px; height: ${size}px; background-color: ${color}; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.2);"></div>`,
       iconSize: [size, size],
       iconAnchor: [size/2, size/2],
     });
@@ -533,7 +533,7 @@ export default function PricesNearYou() {
                 <Marker 
                   key={i} 
                   position={[m.lat, m.lng]} 
-                  icon={getDotIcon(getMarkerColor(m.price, m.walking_distance_km), selectedZone?.name === m.name ? 20 : 16)}
+                  icon={getDotIcon(getMarkerColor(m.price, m.walking_distance_km), selectedZone?.name === m.name ? 16 : 10)}
                   eventHandlers={{
                     click: () => setSelectedZone(selectedZone?.name === m.name ? null : m),
                   }}
