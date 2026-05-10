@@ -539,9 +539,26 @@ export default function PricesNearYou() {
                   }}
                 >
                   <Tooltip direction="top" offset={[0, -10]} opacity={1}>
-                    <div style={{ textAlign: "center", background: "#000", color: "#fff", padding: "6px 10px", borderRadius: "8px", minWidth: "80px", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
-                      <div style={{ fontSize: "9px", fontWeight: "900", opacity: 0.8, textTransform: "uppercase", marginBottom: "2px" }}>{m.name}</div>
-                      <div style={{ fontWeight: "900", fontSize: "14px" }}>${m.price?.toFixed(0)}</div>
+                    <div style={{ 
+                      textAlign: "center", 
+                      background: "rgba(15, 23, 42, 0.9)", 
+                      backdropFilter: "blur(8px)",
+                      color: "#fff", 
+                      padding: "10px 14px", 
+                      borderRadius: "14px", 
+                      minWidth: "120px", 
+                      boxShadow: "0 12px 24px rgba(0,0,0,0.3)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      animation: m.price === priceStats.min ? "pulse-border 2s infinite" : "none"
+                    }}>
+                      <div style={{ fontSize: "10px", fontWeight: "800", opacity: 0.7, textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: "4px" }}>{m.name}</div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "12px", opacity: 0.8 }}>⚡</span>
+                        <div style={{ fontWeight: "900", fontSize: "20px", color: m.price === priceStats.min ? "#FFB800" : "#fff" }}>${m.price?.toFixed(0)}</div>
+                      </div>
+                      {m.price === priceStats.min && (
+                        <div style={{ fontSize: "9px", fontWeight: "900", color: "#10B981", marginTop: "4px", background: "#10B98122", padding: "2px 6px", borderRadius: "4px" }}>BEST DEAL</div>
+                      )}
                     </div>
                   </Tooltip>
                   <Popup>
@@ -668,34 +685,60 @@ export default function PricesNearYou() {
             {results.filtered_zones.length > 0 ? (
               results.filtered_zones.map((r, i) => (
                 <div key={i} className="result-card" style={{ 
-                  background: darkMode ? "#1F2937" : "white", padding: "24px", borderRadius: "20px",
-                  border: `1px solid ${getMarkerColor(r.avg_price)}33`,
-                  boxShadow: "0 10px 15px -3px rgba(0,0,0,0.03)",
-                  transition: "all 0.3s",
-                  borderLeft: `6px solid ${getMarkerColor(r.avg_price)}`
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <p style={{ fontWeight: "900", fontSize: "18px", color: darkMode ? "#F9FAFB" : secondaryColor, marginBottom: "6px" }}>{r.pickup_zone}</p>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "10px", color: "#64748B", fontWeight: "900", textTransform: "uppercase", background: darkMode ? "#111827" : "#F1F5F9", padding: "4px 8px", borderRadius: "6px" }}>{r.pickup_borough}</span>
+                  background: darkMode ? "#1F2937" : "white", padding: "28px", borderRadius: "24px",
+                  border: r.avg_price === priceStats.min ? `2px solid ${primaryColor}` : `1px solid ${darkMode ? "#374151" : "#F1F5F9"}`,
+                  boxShadow: r.avg_price === priceStats.min ? `0 20px 40px ${primaryColor}22` : "0 10px 15px -3px rgba(0,0,0,0.03)",
+                  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                  position: "relative",
+                  overflow: "hidden",
+                  cursor: "pointer"
+                }}
+                onClick={() => {
+                  const coords = NYC_ZONE_COORDS[r.pickup_zone];
+                  if (coords) {
+                    setSelectedZone({
+                      lat: coords[0],
+                      lng: coords[1],
+                      name: r.pickup_zone,
+                      price: r.avg_price,
+                      walking_distance_km: r.walking_distance_km,
+                      isCurrent: false,
+                      isDrop: false
+                    });
+                  }
+                }}
+                >
+                  {r.avg_price === priceStats.min && (
+                    <div style={{ 
+                      position: "absolute", top: "12px", right: "-35px", background: primaryColor, 
+                      color: secondaryColor, fontSize: "10px", fontWeight: "900", padding: "4px 40px", 
+                      transform: "rotate(45deg)", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" 
+                    }}>
+                      CHEAPEST
+                    </div>
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontWeight: "900", fontSize: "20px", color: darkMode ? "#F9FAFB" : secondaryColor, marginBottom: "8px", lineHeight: "1.2" }}>{r.pickup_zone}</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "10px", color: "#64748B", fontWeight: "900", textTransform: "uppercase", background: darkMode ? "#111827" : "#F8FAFC", padding: "4px 10px", borderRadius: "8px", border: "1px solid #E2E8F0" }}>{r.pickup_borough}</span>
                         {r.walking_distance_km > 0 && (
                           <span style={{
-                            fontSize: "11px", fontWeight: "900", padding: "4px 10px", borderRadius: "20px",
+                            fontSize: "11px", fontWeight: "900", padding: "4px 12px", borderRadius: "20px",
                             background: r.walking_distance_km <= 0.5 ? "#DCFCE7" : r.walking_distance_km <= 1 ? "#FEF9C3" : "#FEE2E2",
                             color: r.walking_distance_km <= 0.5 ? "#166534" : r.walking_distance_km <= 1 ? "#854D0E" : "#991B1B",
-                            display: "flex", alignItems: "center", gap: "4px"
+                            display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
                           }}>
                             🚶 {r.walking_distance_km < 1
                               ? Math.round(r.walking_distance_km * 1000) + ' m'
-                              : r.walking_distance_km.toFixed(2) + ' km'} walk
+                              : r.walking_distance_km.toFixed(1) + ' km'}
                           </span>
                         )}
                       </div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <p style={{ fontSize: "24px", fontWeight: "900", color: getMarkerColor(r.avg_price) }}>${r.avg_price?.toFixed(2)}</p>
-                      <p style={{ fontSize: "10px", fontWeight: "900", color: "#94A3B8", textTransform: "uppercase" }}>Avg Fare</p>
+                    <div style={{ textAlign: "right", marginLeft: "16px" }}>
+                      <p style={{ fontSize: "28px", fontWeight: "900", color: getMarkerColor(r.avg_price, r.walking_distance_km), letterSpacing: "-1px" }}>${r.avg_price?.toFixed(2)}</p>
+                      <p style={{ fontSize: "11px", fontWeight: "900", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "1px" }}>Est. Fare</p>
                     </div>
                   </div>
                   {/* Exact location row */}
