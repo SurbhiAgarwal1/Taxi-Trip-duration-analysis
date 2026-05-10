@@ -195,7 +195,7 @@ export default function PricesNearYou() {
 
         if (budgetTooLow) {
           finalTitle = "Budget Alert";
-          finalMsg = `This amount ($${maxBudget}) is too much! You should check out the lower price alternatives available near you.`;
+          finalMsg = `This amount ($${maxBudget}) is too low! You should check out the nearest available options below.`;
         } else if (maxBudget && (budgetMatchedExact || budgetVal >= 50)) {
           // If the user enters a high budget, we show THEIR price as "too much"
           finalTitle = "Price Alert";
