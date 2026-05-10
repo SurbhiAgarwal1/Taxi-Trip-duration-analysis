@@ -156,9 +156,9 @@ export default function PricesNearYou() {
           
           if (withinBudget.length === 0) {
             budgetTooLow = true;
-            filtered = sortedByDistance.slice(0, 5);
+            filtered = sortedByDistance.sort((a,b) => (a.avg_price || 0) - (b.avg_price || 0)).slice(0, 5);
             
-            // "Fix" it by auto-selecting the nearest
+            // "Fix" it by auto-selecting the cheapest available near you
             if (nearest) {
               const coords = NYC_ZONE_COORDS[nearest.pickup_zone];
               if (coords) {
@@ -174,7 +174,7 @@ export default function PricesNearYou() {
               }
             }
           } else {
-            filtered = withinBudget.sort((a,b) => a.walking_distance_km - b.walking_distance_km);
+            filtered = withinBudget.sort((a,b) => (a.avg_price || 0) - (b.avg_price || 0));
             // Check if the best result is an exact match to the budget
             if (filtered[0] && Math.abs(filtered[0].avg_price - budgetVal) < 0.01) {
               budgetMatchedExact = true;
@@ -182,8 +182,8 @@ export default function PricesNearYou() {
           }
         } else {
           // If no budget, just show zones within 1km or top 5
-          filtered = enriched.filter(z => z.walking_distance_km <= 1);
-          if (filtered.length === 0) filtered = sortedByDistance.slice(0, 5);
+          filtered = enriched.filter(z => z.walking_distance_km <= 1.5).sort((a,b) => (a.avg_price || 0) - (b.avg_price || 0));
+          if (filtered.length === 0) filtered = sortedByDistance.sort((a,b) => (a.avg_price || 0) - (b.avg_price || 0)).slice(0, 5);
         }
 
         // 4. Final Modal Content Determination
@@ -195,9 +195,9 @@ export default function PricesNearYou() {
 
         if (budgetTooLow) {
           finalTitle = "Budget Alert";
-          finalMsg = `Your budget of $${maxBudget} is too low for any nearby zones. Showing the nearest available pickup point instead.`;
-        } else if (maxBudget && (budgetMatchedExact || topPrice >= budgetVal - 5)) {
-          // Price is close to or matches the budget - "too much"
+          finalMsg = `Your budget of $${maxBudget} is too low for any nearby zones. Showing the cheapest options near you instead.`;
+        } else if (maxBudget && (budgetMatchedExact || budgetVal >= 50)) {
+          // If the user enters a high budget, we show THEIR price as "too much"
           finalTitle = "Price Alert";
           finalMsg = `This amount ($${budgetVal.toFixed(2)}) is too much! You should check out the lower price alternatives available near you.`;
         } else if (topPrice >= 50) {
@@ -237,10 +237,19 @@ export default function PricesNearYou() {
 
   const getMarkerColor = (price, dist) => {
     if (!price) return "#3B82F6"; // Current location
-    if (dist > 2.5) return "#EF4444"; // Red for FAR (user request)
+    if (dist > 2.5) return "#EF4444"; // Red for FAR
     if (price < 20) return "#10B981"; // Green for Cheap
     if (price < 40) return "#F59E0B"; // Orange for Medium
     return "#991B1B"; // Dark Red for Expensive but Nearby
+  };
+
+  const getDotIcon = (color, size = 12) => {
+    return L.divIcon({
+      className: 'custom-dot-icon',
+      html: `<div style="width: ${size}px; height: ${size}px; background-color: ${color}; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2],
+    });
   };
 
   const mapMarkers = useMemo(() => {
@@ -514,23 +523,17 @@ export default function PricesNearYou() {
                   </Tooltip>
                 </Marker>
               ) : (
-                <CircleMarker
-                  key={i}
-                  center={[m.lat, m.lng]}
-                  radius={selectedZone?.name === m.name ? 22 : (m.price < 20 ? 18 : 14)}
-                  pathOptions={{ 
-                    color: selectedZone?.name === m.name ? "#FFB800" : "#fff",
-                    fillColor: getMarkerColor(m.price, m.walking_distance_km), 
-                    fillOpacity: m.walking_distance_km > 3 ? 0.5 : 0.9, 
-                    weight: selectedZone?.name === m.name ? 6 : 2
-                  }}
+                <Marker 
+                  key={i} 
+                  position={[m.lat, m.lng]} 
+                  icon={getDotIcon(getMarkerColor(m.price, m.walking_distance_km), selectedZone?.name === m.name ? 20 : 16)}
                   eventHandlers={{
                     click: () => setSelectedZone(selectedZone?.name === m.name ? null : m),
                   }}
                 >
                   <Tooltip direction="top" offset={[0, -10]} opacity={1}>
-                    <div style={{ textAlign: "center", background: "rgba(0,0,0,0.6)", padding: "2px 6px", borderRadius: "4px" }}>
-                      <div style={{ fontWeight: "900", fontSize: "10px", color: "#fff" }}>${m.price?.toFixed(0)}</div>
+                    <div style={{ textAlign: "center", background: "#000", color: "#fff", padding: "4px 8px", borderRadius: "6px", fontWeight: "800", fontSize: "12px" }}>
+                      ${m.price?.toFixed(0)}
                     </div>
                   </Tooltip>
                   <Popup>
@@ -545,7 +548,7 @@ export default function PricesNearYou() {
                       </div>
                     </div>
                   </Popup>
-                </CircleMarker>
+                </Marker>
               )
             ))}
 
