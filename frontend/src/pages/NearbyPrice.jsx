@@ -250,10 +250,10 @@ export default function PricesNearYou() {
     return "#B91C1C"; // Least Good in Set (Maroon/Dark Red)
   };
 
-  const getDotIcon = (color, size = 10) => {
+  const getDotIcon = (color, size = 12) => {
     return L.divIcon({
       className: 'custom-dot-icon',
-      html: `<div style="width: ${size}px; height: ${size}px; background-color: ${color}; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.2);"></div>`,
+      html: `<div style="width: ${size}px; height: ${size}px; background-color: ${color}; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.4);"></div>`,
       iconSize: [size, size],
       iconAnchor: [size/2, size/2],
     });
@@ -533,14 +533,15 @@ export default function PricesNearYou() {
                 <Marker 
                   key={i} 
                   position={[m.lat, m.lng]} 
-                  icon={getDotIcon(getMarkerColor(m.price, m.walking_distance_km), selectedZone?.name === m.name ? 16 : 10)}
+                  icon={getDotIcon(getMarkerColor(m.price, m.walking_distance_km), selectedZone?.name === m.name ? 18 : 14)}
                   eventHandlers={{
                     click: () => setSelectedZone(selectedZone?.name === m.name ? null : m),
                   }}
                 >
                   <Tooltip direction="top" offset={[0, -10]} opacity={1}>
-                    <div style={{ textAlign: "center", background: "#000", color: "#fff", padding: "4px 8px", borderRadius: "6px", fontWeight: "800", fontSize: "12px" }}>
-                      ${m.price?.toFixed(0)}
+                    <div style={{ textAlign: "center", background: "#000", color: "#fff", padding: "6px 10px", borderRadius: "8px", minWidth: "80px", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                      <div style={{ fontSize: "9px", fontWeight: "900", opacity: 0.8, textTransform: "uppercase", marginBottom: "2px" }}>{m.name}</div>
+                      <div style={{ fontWeight: "900", fontSize: "14px" }}>${m.price?.toFixed(0)}</div>
                     </div>
                   </Tooltip>
                   <Popup>
