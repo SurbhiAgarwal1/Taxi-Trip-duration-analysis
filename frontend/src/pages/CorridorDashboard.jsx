@@ -78,22 +78,22 @@ export default function RouteOverview() {
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
             <h1 style={{ fontSize: "36px", fontWeight: "900", margin: 0 }}>Route Overview</h1>
             <div style={{ 
-              background: "#10B98122", color: "#10B981", padding: "4px 10px", 
-              borderRadius: "20px", fontSize: "11px", fontWeight: "800",
-              display: "flex", alignItems: "center", gap: "6px"
+              background: "#10B98122", color: "#10B981", padding: "6px 12px", 
+              borderRadius: "12px", fontSize: "12px", fontWeight: "900",
+              letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: "6px"
             }}>
-              <span style={{ 
-                width: "8px", height: "8px", background: "#10B981", 
-                borderRadius: "50%", display: "inline-block",
-                boxShadow: "0 0 8px #10B981",
-                animation: "pulse 2s infinite"
-              }}></span>
-              LIVE DATA
+              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10B981", animation: "pulse 1.5s infinite" }}></div>
+              LIVE SYSTEM
             </div>
           </div>
-          <p style={{ color: darkMode ? "#9CA3AF" : "#6B7280", fontWeight: "600", fontSize: "15px" }}>
-            Real-time intelligence on NYC's top transit corridors.
-          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", width: "100%" }}>
+            <p style={{ color: darkMode ? "#9CA3AF" : "#6B7280", fontWeight: "600", fontSize: "16px", margin: 0 }}>
+              Real-time intelligence on NYC's top transit corridors.
+            </p>
+            <div style={{ fontSize: "11px", fontWeight: "800", color: "#94A3B8", background: darkMode ? "#111827" : "#F1F5F9", padding: "4px 10px", borderRadius: "8px" }}>
+              ⏱️ LAST DATA SYNC: {new Date().toLocaleTimeString()}
+            </div>
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
