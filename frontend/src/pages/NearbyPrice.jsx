@@ -196,10 +196,10 @@ export default function PricesNearYou() {
         if (budgetTooLow) {
           finalTitle = "Budget Alert";
           finalMsg = `Your budget of $${maxBudget} is too low for any nearby zones. Showing the nearest available pickup point instead.`;
-        } else if (topPrice >= 70) {
+        } else if (budgetMatchedExact || topPrice >= 50) {
           finalTitle = "High Price Alert";
           finalMsg = `This amount ($${topPrice.toFixed(2)}) is too much! You should check out the lower price alternatives available near you.`;
-        } else if (topPrice >= 35) {
+        } else if (topPrice >= 20) {
           finalTitle = "Price Alert";
           finalMsg = `This price ($${topPrice.toFixed(2)}) is too much! You should check out the lower price options found below.`;
         }
@@ -522,10 +522,9 @@ export default function PricesNearYou() {
                     click: () => setSelectedZone(selectedZone?.name === m.name ? null : m),
                   }}
                 >
-                  <Tooltip direction="top" offset={[0, -10]} opacity={1} permanent={m.price < 35 && m.walking_distance_km < 2}>
-                    <div style={{ textAlign: "center", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))" }}>
-                      <div style={{ fontWeight: "900", fontSize: "11px", color: "#fff", textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}>${m.price?.toFixed(0)}</div>
-                      <div style={{ fontSize: "9px", color: "#fff", fontWeight: "700" }}>{m.walking_distance_km?.toFixed(1)}km</div>
+                  <Tooltip direction="top" offset={[0, -10]} opacity={1} permanent={m.price < 25}>
+                    <div style={{ textAlign: "center", background: "rgba(0,0,0,0.6)", padding: "2px 6px", borderRadius: "4px" }}>
+                      <div style={{ fontWeight: "900", fontSize: "10px", color: "#fff" }}>${m.price?.toFixed(0)}</div>
                     </div>
                   </Tooltip>
                   <Popup>
